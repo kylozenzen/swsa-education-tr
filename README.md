@@ -1,28 +1,35 @@
-# Tour Report + GroupMe DM Bot v3
+# Tour Report + GroupMe v6
 
-This diagnostic build makes the deployed function version visible in every response.
+## What changed
 
-## Required Netlify environment variables
+Educators no longer need to remember `!r` or type APON.
 
-- `GROUPME_BOT_ID`
-- `GROUPME_CALLBACK_KEY`
+Examples:
 
-## Verify deployment
+- `sea lion 1:15` → APON
+- `shark 2:15 ns` → no show
+- `penguin 3:45 dns` → did not sell
+- `beluga 2 guest arrived late` → ISSUE with that note
+- `vip 1` → APON for VIP tour 1
 
-Open:
+The old `!r ...` format still works.
+
+## Help protection
+
+- One help response per user per 60 seconds
+- One help response for the whole group every 20 seconds
+- Repeated bad commands receive at most one error response every 10 seconds per user
+- Normal conversation is ignored
+- Reports are stored before the bot attempts its confirmation reply
+- GroupMe 420/429/503 responses are retried briefly
+
+## Deploy
+
+Replace the repository contents with this package and commit. Netlify will redeploy from GitHub.
+No environment-variable or callback URL changes are needed.
+
+After deployment, verify:
 
 `https://YOUR-SITE.netlify.app/.netlify/functions/groupme?key=YOUR_KEY`
 
-Expected response includes:
-
-`"version":"dm-v3-2026-07-18"`
-
-Then initialize the DM:
-
-`https://YOUR-SITE.netlify.app/.netlify/functions/groupme?key=YOUR_KEY&start=1`
-
-Expected response includes:
-
-- `"version":"dm-v3-2026-07-18"`
-- `"action":"welcome-message-posted"`
-- `"groupmeStatus":201`
+The version should be `groupme-v6-2026-07-18`.

@@ -11,3 +11,18 @@
   from = "/api/groupme"
   to = "/.netlify/functions/groupme"
   status = 200
+
+[[redirects]]
+  from = "/shift"
+  to = "/shift.html"
+  status = 302
+
+[[headers]]
+  for = "/shift.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+
+[[headers]]
+  for = "/shift"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"

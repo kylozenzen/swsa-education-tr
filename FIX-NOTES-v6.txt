@@ -1,0 +1,1 @@
+V6: natural-language tour submissions, APON by default, compact help, cooldown protection, safe confirmations, and retry handling.

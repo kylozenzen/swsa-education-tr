@@ -34,7 +34,10 @@
   .row:last-child{border-bottom:0}
   .slot{font:700 12px ui-monospace,monospace;padding-top:9px}
   .slot small{display:block;font-weight:400;color:var(--slate)}
-  .who{font:400 10px ui-monospace,monospace;color:var(--kelp)}
+  .who{display:block;margin-top:3px;font:600 10px ui-monospace,monospace;color:var(--slate)}
+  .row.reported{background:var(--kelp-soft);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:3px}
+  .row.reported .who{color:var(--kelp)}
+  .row.unreported .who{color:var(--slate);font-weight:400}
   input.apon{color:var(--slate)}
   input.flagged{border-color:var(--amber);background:var(--amber-soft)}
   .legend{font:11px/1.6 ui-monospace,monospace;color:var(--slate);background:var(--kelp-soft);
@@ -112,7 +115,7 @@ const label = i => SLOTS.filter(s => s === SLOTS[i]).length > 1
 const $ = s => document.querySelector(s);
 const chicagoToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
-let state = { date: chicagoToday(), slots: {}, narrative: {}, who: {}, overrides: {} };
+let state = { date: chicagoToday(), slots: {}, narrative: {}, who: {}, overrides: {}, reported: new Set() };
 let dirty = false;
 
 /* what a guide sent becomes the line in the report */
@@ -125,23 +128,26 @@ function lineFrom(sub){
 async function pull(){
   $("#live").textContent = "loading…";
   try{
-    const res = await fetch(`/api/day?date=${state.date}&t=${Date.now()}`, { cache: "no-store" });
+    const res = await fetch(`/.netlify/functions/day?date=${encodeURIComponent(state.date)}&t=${Date.now()}`, { cache: "no-store" });
+    if(!res.ok) throw new Error(`day endpoint returned ${res.status}`);
     const day = await res.json();
 
     // the supervisor's own edits win; a slot nobody touched is APON
     const edits = day.slots || {};
     state.overrides = { ...edits };
     state.narrative = day.narrative || {};
-    state.slots = {}; state.who = {};
+    state.slots = {}; state.who = {}; state.reported = new Set();
     (day.submissions || []).forEach(s => {
-      state.slots[s.slot] = lineFrom(s);
-      if(s.who) state.who[s.slot] = s.who;
+      const slotKey = String(s.slot);
+      state.reported.add(slotKey);
+      state.slots[slotKey] = lineFrom(s);
+      if(s.who) state.who[slotKey] = s.who;
     });
     Object.entries(edits).forEach(([k, v]) => { if(v) state.slots[k] = v; });
     SLOTS.forEach((s, i) => { if(!state.slots[i] && !/NON OP/.test(s)) state.slots[i] = "APON"; });
 
     const n = (day.submissions || []).length;
-    $("#live").textContent = `${n} report${n === 1 ? "" : "s"} in`;
+    $("#live").textContent = `${n} report${n === 1 ? "" : "s"} in · live v5`;
     paint();
   }catch{
     $("#live").textContent = "offline";
@@ -170,7 +176,7 @@ function build(){
   SLOTS.forEach((s, i) => {
     const row = document.createElement("div");
     row.className = "row";
-    row.innerHTML = `<div class="slot">${label(i)}<small class="who" data-w="${i}"></small></div>
+    row.innerHTML = `<div class="slot">${label(i)}<small class="who" data-w="${i}">not submitted</small></div>
                      <input type="text" data-k="${i}" placeholder="APON">`;
     box.appendChild(row);
   });
@@ -212,7 +218,14 @@ function paint(){
     style(inp);
   });
   document.querySelectorAll("[data-w]").forEach(el => {
-    el.textContent = state.who[el.dataset.w] ? "from " + state.who[el.dataset.w] : "";
+    const key = String(el.dataset.w);
+    const submitted = state.reported.has(key);
+    const row = el.closest(".row");
+    row.classList.toggle("reported", submitted);
+    row.classList.toggle("unreported", !submitted);
+    el.textContent = submitted
+      ? `✓ submitted${state.who[key] ? " by " + state.who[key] : ""}`
+      : "not submitted";
   });
   document.querySelectorAll("[data-n]").forEach(el => el.value = state.narrative[el.dataset.n] || "");
   $("#date").value = state.date;

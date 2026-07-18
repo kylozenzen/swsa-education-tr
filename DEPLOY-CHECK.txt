@@ -1,7 +1,4 @@
-TOUR REPORT GROUPME DM PACKAGE
-Version: dm-v3-2026-07-18
-
-After deployment, the following URL must return JSON containing:
-"version":"dm-v3-2026-07-18"
-
-/.netlify/functions/groupme?key=YOUR_KEY
+GROUPME NATURAL REPORTS V6
+Expected function version: groupme-v6-2026-07-18
+Example: sea lion 1:15
+No status means APON.
