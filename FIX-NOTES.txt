@@ -1,0 +1,10 @@
+TOUR REPORT GROUPME V4
+
+Fixes:
+- Shift Report stores only explicit supervisor overrides.
+- Legacy saved default APON maps are ignored so they cannot hide new GroupMe submissions.
+- Default APON values no longer become supervisor overrides after editing another field.
+- Day API and Shift Report fetches disable caching.
+- GroupMe diagnostic version is groupme-v4-2026-07-18.
+
+After deploying, open /api/day to confirm submissions exist, then open /shift.html and click Check for new reports.

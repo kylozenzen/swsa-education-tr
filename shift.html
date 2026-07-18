@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shift Report</title>
+<style>
+  :root{ --ink:#10202b; --slate:#33505f; --paper:#eef1ee; --card:#fff; --rule:#c9d3d2;
+         --kelp:#1d6b5f; --kelp-soft:#e2efe9; --amber:#8a6212; --amber-soft:#faf0d8; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:15px/1.5 ui-sans-serif,system-ui,"Segoe UI",Helvetica,sans-serif}
+  .wrap{max-width:940px;margin:0 auto;padding:24px 18px 90px}
+  header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:20px}
+  h1{font-size:21px;margin:0}
+  .sub{font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;
+       letter-spacing:.14em;color:var(--slate)}
+  .live{margin-left:auto;font:600 11px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;
+        color:var(--kelp);background:var(--kelp-soft);padding:7px 10px;border-radius:2px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-family:ui-monospace,monospace;
+     color:var(--slate);margin:26px 0 10px}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px;margin-bottom:14px}
+  label{display:block;font:600 10px ui-monospace,monospace;text-transform:uppercase;
+        letter-spacing:.1em;color:var(--slate);margin-bottom:5px}
+  input[type=text],input[type=date],textarea{width:100%;padding:9px 10px;border:1px solid var(--rule);
+        border-radius:3px;font:15px ui-sans-serif,system-ui;background:#fbfcfb;color:var(--ink)}
+  textarea{min-height:62px;resize:vertical}
+  input:focus,textarea:focus{outline:2px solid var(--kelp);outline-offset:-1px}
+  button{font:600 14px ui-sans-serif,system-ui;padding:11px 15px;border-radius:3px;
+         border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+  button.ghost{background:#fff;color:var(--ink)}
+  .row{display:grid;grid-template-columns:180px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule)}
+  .row:last-child{border-bottom:0}
+  .slot{font:700 12px ui-monospace,monospace;padding-top:9px}
+  .slot small{display:block;font-weight:400;color:var(--slate)}
+  .who{font:400 10px ui-monospace,monospace;color:var(--kelp)}
+  input.apon{color:var(--slate)}
+  input.flagged{border-color:var(--amber);background:var(--amber-soft)}
+  .legend{font:11px/1.6 ui-monospace,monospace;color:var(--slate);background:var(--kelp-soft);
+          border-left:3px solid var(--kelp);padding:8px 10px;border-radius:0 3px 3px 0;margin-bottom:14px}
+  .bar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--paper) 22%);
+       padding:16px 0 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ok{color:var(--kelp);font:600 12px ui-monospace,monospace}
+
+  #sheet{display:none}
+  @media print{
+    body{background:#fff}
+    .wrap > *:not(#sheet){display:none !important}
+    #sheet{display:block}
+    @page{size:letter portrait;margin:.5in}
+  }
+  #sheet h3{font-size:17px;margin:0 0 2px}
+  #sheet .date{font:600 12px ui-monospace,monospace;color:#444;margin-bottom:10px}
+  #sheet table{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:12px}
+  #sheet td{border:1px solid #999;padding:4px 6px;vertical-align:top}
+  #sheet td.k{width:34%;font-weight:700;background:#f1f4f2;text-transform:uppercase;font-size:9px}
+  #sheet td.s{width:26%;font-weight:700;font-family:ui-monospace,monospace;font-size:10px}
+  #sheet .band{font:700 9px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
+       background:#10202b;color:#fff;padding:4px 6px;margin:10px 0 4px}
+  #sheet .lg{font:9px ui-monospace,monospace;color:#555;margin-bottom:6px}
+  #sheet tr.exc td{background:#fdf6e6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Shift Report</h1>
+    <span class="sub">what the team sent in today</span>
+    <span class="live" id="live">loading…</span>
+  </header>
+
+  <div class="card">
+    <label>Date</label>
+    <input type="date" id="date">
+  </div>
+
+  <h2>Tour reports</h2>
+  <div class="card">
+    <div class="legend">APON: all present / operational normal &middot; NS: no show &middot; DNS: did not sell</div>
+    <div id="slots"></div>
+  </div>
+
+  <h2>Your notes</h2>
+  <div class="card" id="narrative"></div>
+
+  <div class="bar">
+    <button id="print">Save as PDF</button>
+    <button class="ghost" id="refresh">Check for new reports</button>
+    <span class="ok" id="saved"></span>
+  </div>
+
+  <div id="sheet"></div>
+</div>
+
+<script>
+const SLOTS = ["PIP 10:30AM","PIP 11:00AM","PIP 1:15","SHARK 11","SHARK 12","SHARK 2:15","SHARK 4:00",
+  "SHARK 5:00","SEALION 1:15","AAT 1:30","BELUGA 2:00","PENGUIN 2:45","PENGUIN 3:45","ALDABRA 11:15",
+  "ALDABRA 2:00","ALDABRA 3:30","KILLER WHALE 2:45","KILLER WHALE 4:45","Fam","UAE","VIP","VIP",
+  "DP ORIENTATION","AAT NON OP","ALL SWIM NON OP","UAE NON OP"];
+
+const NARRATIVE = ["AIC TOP SELLER","WHAT WERE THE HIGHS/LOWS OF THE DAY","HOW WAS THE SCHEDULE AND/OR LOGISTICS?",
+  "WERE THERE ANY INTERFERENCES WITH OTHER DEPARTMENTS?",
+  "WHO DID YOU HAVE FEEDBACK CONVERSATION WITH TODAY? MAKE SURE THEY WERE DOCUMENTED?",
+  "WHICH AUDITS DID YOU CONDUCT & WHAT SCORE WAS RECEIVED?","NOTES FROM DP ORIENTATION:",
+  "WHERE THERE ANY EHS CALLS/VISITS? PLEASE DESCRIBE THE INCIDENT(WITH TIMES)",
+  "QUSTIONS/COMMENTS FOR LEADERSHIP:","ANY GUEST INTERACTIONS/COMPLICATIONS WE NEED TO BE AWARE OF?",
+  "THINGS TO KNOW FOR TOMORROW:","MISC NOTES:"];
+
+const label = i => SLOTS.filter(s => s === SLOTS[i]).length > 1
+  ? `${SLOTS[i]} (${SLOTS.slice(0, i + 1).filter(s => s === SLOTS[i]).length})` : SLOTS[i];
+const $ = s => document.querySelector(s);
+const chicagoToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+
+let state = { date: chicagoToday(), slots: {}, narrative: {}, who: {}, overrides: {} };
+let dirty = false;
+
+/* what a guide sent becomes the line in the report */
+function lineFrom(sub){
+  if(sub.status === "APON") return "APON";
+  if(sub.status === "ISSUE") return sub.note || "See note";
+  return `${sub.note ? sub.note + " " : ""}${sub.status}`.trim();
+}
+
+async function pull(){
+  $("#live").textContent = "loading…";
+  try{
+    const res = await fetch(`/api/day?date=${state.date}&t=${Date.now()}`, { cache: "no-store" });
+    const day = await res.json();
+
+    // the supervisor's own edits win; a slot nobody touched is APON
+    const edits = day.slots || {};
+    state.overrides = { ...edits };
+    state.narrative = day.narrative || {};
+    state.slots = {}; state.who = {};
+    (day.submissions || []).forEach(s => {
+      state.slots[s.slot] = lineFrom(s);
+      if(s.who) state.who[s.slot] = s.who;
+    });
+    Object.entries(edits).forEach(([k, v]) => { if(v) state.slots[k] = v; });
+    SLOTS.forEach((s, i) => { if(!state.slots[i] && !/NON OP/.test(s)) state.slots[i] = "APON"; });
+
+    const n = (day.submissions || []).length;
+    $("#live").textContent = `${n} report${n === 1 ? "" : "s"} in`;
+    paint();
+  }catch{
+    $("#live").textContent = "offline";
+  }
+}
+
+async function push(){
+  try{
+    await fetch("/api/day", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ date: state.date, narrative: state.narrative, overrides: state.overrides })
+    });
+    $("#saved").textContent = "saved";
+    setTimeout(() => $("#saved").textContent = "", 1200);
+  }catch{}
+}
+const queueSave = () => { dirty = true; };
+setInterval(() => { if(dirty){ dirty = false; push(); } }, 2500);
+
+function build(){
+  $("#date").value = state.date;
+  $("#date").onchange = e => { state.date = e.target.value; pull(); };
+
+  const box = $("#slots");
+  SLOTS.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<div class="slot">${label(i)}<small class="who" data-w="${i}"></small></div>
+                     <input type="text" data-k="${i}" placeholder="APON">`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll("input").forEach(inp => inp.oninput = () => {
+    const key = inp.dataset.k;
+    const value = inp.value;
+    state.slots[key] = value;
+    if(value.trim()) state.overrides[key] = value;
+    else delete state.overrides[key];
+    style(inp);
+    queueSave();
+  });
+
+  const nb = $("#narrative");
+  NARRATIVE.forEach((q, i) => {
+    const d = document.createElement("div");
+    d.style.marginBottom = "12px";
+    d.innerHTML = `<label>${q}</label>` +
+      (i === 0 ? `<input type="text" data-n="${i}">` : `<textarea data-n="${i}"></textarea>`);
+    nb.appendChild(d);
+  });
+  nb.querySelectorAll("[data-n]").forEach(el => el.oninput = () => {
+    state.narrative[el.dataset.n] = el.value; queueSave();
+  });
+
+  $("#print").onclick = () => { buildSheet(); window.print(); };
+  $("#refresh").onclick = pull;
+}
+
+function style(inp){
+  const v = (inp.value || "").trim();
+  inp.classList.toggle("apon", !v || /^apon$/i.test(v));
+  inp.classList.toggle("flagged", !!v && !/^apon$/i.test(v));
+}
+
+function paint(){
+  document.querySelectorAll("#slots input").forEach(inp => {
+    inp.value = state.slots[inp.dataset.k] || "";
+    style(inp);
+  });
+  document.querySelectorAll("[data-w]").forEach(el => {
+    el.textContent = state.who[el.dataset.w] ? "from " + state.who[el.dataset.w] : "";
+  });
+  document.querySelectorAll("[data-n]").forEach(el => el.value = state.narrative[el.dataset.n] || "");
+  $("#date").value = state.date;
+}
+
+function buildSheet(){
+  const pretty = new Date(state.date + "T12:00").toLocaleDateString("en-US",
+    { weekday:"long", month:"long", day:"numeric", year:"numeric" });
+  const narr = NARRATIVE.map((q, i) =>
+    `<tr><td class="k">${q}</td><td>${esc(state.narrative[i] || "")}</td></tr>`).join("");
+  const tours = SLOTS.map((s, i) => {
+    const v = (state.slots[i] || "").trim();
+    const exc = v && !/^apon$/i.test(v);
+    return `<tr class="${exc ? "exc" : ""}"><td class="s">${esc(label(i))}</td><td>${esc(v)}</td></tr>`;
+  }).join("");
+  $("#sheet").innerHTML = `
+    <h3>Shift Report</h3>
+    <div class="date">${pretty}</div>
+    <table>${narr}</table>
+    <div class="band">Tour reports</div>
+    <div class="lg">APON: all present / operational normal &nbsp;&middot;&nbsp; NS: no show &nbsp;&middot;&nbsp; DNS: did not sell</div>
+    <table>${tours}</table>`;
+}
+function esc(s){ return String(s || "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+build();
+pull();
+setInterval(pull, 60000);   // new reports land on their own
+</script>
+</body>
+</html>
