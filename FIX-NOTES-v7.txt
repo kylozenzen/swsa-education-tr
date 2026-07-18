@@ -1,0 +1,1 @@
+V7: accepts Killer Whale compact times, fixes 1L15/1I15 time typos, and supports multiple reports in one message.
