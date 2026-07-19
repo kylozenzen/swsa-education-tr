@@ -94,3 +94,19 @@ export async function saveDay(date, input) {
   await store().setJSON(`days/${dayDate}`, record);
   return record;
 }
+
+export async function claimCooldown({ kind, senderId = "global", seconds }) {
+  const safeKind = cleanText(kind, 40).replace(/[^a-zA-Z0-9_-]/g, "-") || "generic";
+  const safeSender = cleanText(senderId, 120).replace(/[^a-zA-Z0-9_-]/g, "-") || "unknown";
+  const key = `cooldowns/${safeKind}/${safeSender}`;
+  const db = store();
+  const now = Date.now();
+  const current = await db.get(key, { type: "json" });
+
+  if (current && Number(current.until) > now) {
+    return { allowed: false, retryAfterMs: Number(current.until) - now };
+  }
+
+  await db.setJSON(key, { until: now + seconds * 1000, updatedAt: new Date().toISOString() });
+  return { allowed: true, retryAfterMs: 0 };
+}
