@@ -1,7 +1,7 @@
-import { addSubmission, claimCooldown } from "./_store.mjs";
+import { addSubmission, claimCooldown, getTourConfig } from "./_store.mjs";
 import { commandHelp, parseReportMessage } from "./_slots.mjs";
 
-const VERSION = "groupme-v7-2026-07-18";
+const VERSION = "groupme-v8-2026-08-13";
 const json = (data, status = 200) => Response.json(data, {
   status,
   headers: { "cache-control": "no-store" },
@@ -60,17 +60,14 @@ function welcomeMessage() {
   return [
     "👋 Education Bot is connected.",
     "",
-    "Just send your tour and time:",
-    "penguin 245",
-    "sea lion 1:15",
-    "killer whale 245",
-    "",
-    "No status = APON. Send “help” for examples.",
+    "Just send your tour and time.",
+    "No status = APON. Send “help” for the current tour examples.",
   ].join("\n");
 }
 
 async function saveOneReport({ parsed, senderName, senderId, sourceId }) {
   return addSubmission({
+    slotId: parsed.slotId,
     slot: parsed.slot,
     status: parsed.status,
     note: parsed.note,
@@ -125,7 +122,9 @@ export default async function handler(request) {
 
     const senderId = String(message.sender_id || message.user_id || "unknown");
     const senderName = message.name || "GroupMe user";
-    const parsed = parseReportMessage(message.text);
+    const config = await getTourConfig();
+    const reportSlots = config.tours.filter((slot) => slot.active !== false && slot.reportable !== false);
+    const parsed = parseReportMessage(message.text, reportSlots);
 
     if (parsed.kind === "ignore") {
       return json({ ok: true, version: VERSION, ignored: true });
@@ -144,7 +143,7 @@ export default async function handler(request) {
         return json({ ok: true, version: VERSION, action: "help-rate-limited" });
       }
 
-      const reply = await safePost(commandHelp());
+      const reply = await safePost(commandHelp(reportSlots));
       return json({ ok: true, version: VERSION, action: "help-posted", replyPosted: reply.ok });
     }
 

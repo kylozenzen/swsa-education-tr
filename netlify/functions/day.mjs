@@ -1,5 +1,4 @@
-import { addSubmission, chicagoToday, getDay, saveDay, validDate } from "./_store.mjs";
-import { REPORT_SLOTS, VALID_STATUSES } from "./_slots.mjs";
+import { chicagoToday, getDay, saveDay, validDate } from "./_store.mjs";
 
 const json = (data, status = 200) => Response.json(data, {
   status,
@@ -17,22 +16,7 @@ export default async function handler(request) {
     }
 
     if (request.method === "POST") {
-      const input = await request.json();
-      const slot = Number(input.slot);
-      const status = String(input.status || "").toUpperCase();
-
-      if (!Number.isInteger(slot) || slot < 0 || slot >= REPORT_SLOTS.length) {
-        return json({ error: "Invalid tour slot." }, 400);
-      }
-      if (!VALID_STATUSES.has(status)) {
-        return json({ error: "Invalid status." }, 400);
-      }
-      if (status === "ISSUE" && !String(input.note || "").trim()) {
-        return json({ error: "ISSUE reports require a note." }, 400);
-      }
-
-      const result = await addSubmission({ ...input, slot, status });
-      return json({ ok: true, ...result }, result.duplicate ? 200 : 201);
+      return json({ error: "Online tour reporting is currently disabled." }, 410);
     }
 
     if (request.method === "PUT") {

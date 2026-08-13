@@ -1,259 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Shift Report</title>
 <style>
-  :root{ --ink:#10202b; --slate:#33505f; --paper:#eef1ee; --card:#fff; --rule:#c9d3d2;
-         --kelp:#1d6b5f; --kelp-soft:#e2efe9; --amber:#8a6212; --amber-soft:#faf0d8; }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--paper);color:var(--ink);
-       font:15px/1.5 ui-sans-serif,system-ui,"Segoe UI",Helvetica,sans-serif}
-  .wrap{max-width:940px;margin:0 auto;padding:24px 18px 90px}
-  header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
-    padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:20px}
-  h1{font-size:21px;margin:0}
-  .sub{font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;
-       letter-spacing:.14em;color:var(--slate)}
-  .live{margin-left:auto;font:600 11px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;
-        color:var(--kelp);background:var(--kelp-soft);padding:7px 10px;border-radius:2px}
-  h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;font-family:ui-monospace,monospace;
-     color:var(--slate);margin:26px 0 10px}
-  .card{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px;margin-bottom:14px}
-  label{display:block;font:600 10px ui-monospace,monospace;text-transform:uppercase;
-        letter-spacing:.1em;color:var(--slate);margin-bottom:5px}
-  input[type=text],input[type=date],textarea{width:100%;padding:9px 10px;border:1px solid var(--rule);
-        border-radius:3px;font:15px ui-sans-serif,system-ui;background:#fbfcfb;color:var(--ink)}
-  textarea{min-height:62px;resize:vertical}
-  input:focus,textarea:focus{outline:2px solid var(--kelp);outline-offset:-1px}
-  button{font:600 14px ui-sans-serif,system-ui;padding:11px 15px;border-radius:3px;
-         border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
-  button.ghost{background:#fff;color:var(--ink)}
-  .row{display:grid;grid-template-columns:180px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule)}
-  .row:last-child{border-bottom:0}
-  .slot{font:700 12px ui-monospace,monospace;padding-top:9px}
-  .slot small{display:block;font-weight:400;color:var(--slate)}
-  .who{display:block;margin-top:3px;font:600 10px ui-monospace,monospace;color:var(--slate)}
-  .row.reported{background:var(--kelp-soft);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:3px}
-  .row.reported .who{color:var(--kelp)}
-  .row.unreported .who{color:var(--slate);font-weight:400}
-  input.apon{color:var(--slate)}
-  input.flagged{border-color:var(--amber);background:var(--amber-soft)}
-  .legend{font:11px/1.6 ui-monospace,monospace;color:var(--slate);background:var(--kelp-soft);
-          border-left:3px solid var(--kelp);padding:8px 10px;border-radius:0 3px 3px 0;margin-bottom:14px}
-  .bar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--paper) 22%);
-       padding:16px 0 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .ok{color:var(--kelp);font:600 12px ui-monospace,monospace}
-
-  #sheet{display:none}
-  @media print{
-    body{background:#fff}
-    .wrap > *:not(#sheet){display:none !important}
-    #sheet{display:block}
-    @page{size:letter portrait;margin:.5in}
-  }
-  #sheet h3{font-size:17px;margin:0 0 2px}
-  #sheet .date{font:600 12px ui-monospace,monospace;color:#444;margin-bottom:10px}
-  #sheet table{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:12px}
-  #sheet td{border:1px solid #999;padding:4px 6px;vertical-align:top}
-  #sheet td.k{width:34%;font-weight:700;background:#f1f4f2;text-transform:uppercase;font-size:9px}
-  #sheet td.s{width:26%;font-weight:700;font-family:ui-monospace,monospace;font-size:10px}
-  #sheet .band{font:700 9px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
-       background:#10202b;color:#fff;padding:4px 6px;margin:10px 0 4px}
-  #sheet .lg{font:9px ui-monospace,monospace;color:#555;margin-bottom:6px}
-  #sheet tr.exc td{background:#fdf6e6}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <header class="top">
-    <h1>Shift Report</h1>
-    <span class="sub">what the team sent in today</span>
-    <span class="live" id="live">loading…</span>
-  </header>
-
-  <div class="card">
-    <label>Date</label>
-    <input type="date" id="date">
-  </div>
-
-  <h2>Tour reports</h2>
-  <div class="card">
-    <div class="legend">APON: all present / operational normal &middot; NS: no show &middot; DNS: did not sell</div>
-    <div id="slots"></div>
-  </div>
-
-  <h2>Your notes</h2>
-  <div class="card" id="narrative"></div>
-
-  <div class="bar">
-    <button id="print">Save as PDF</button>
-    <button class="ghost" id="refresh">Check for new reports</button>
-    <span class="ok" id="saved"></span>
-  </div>
-
-  <div id="sheet"></div>
-</div>
-
+:root{--ink:#10202b;--slate:#33505f;--paper:#eef1ee;--card:#fff;--rule:#c9d3d2;--kelp:#1d6b5f;--soft:#e2efe9;--amber:#8a6212;--amberSoft:#faf0d8;--red:#9b3f32}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}.wrap{max-width:940px;margin:auto;padding:24px 18px 90px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:20px}h1{font-size:21px;margin:0}.sub,label,h2,.live,.who{font-family:ui-monospace,monospace}.sub{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--slate)}.live{margin-left:auto;font-size:11px;color:var(--kelp);background:var(--soft);padding:7px 9px}
+h2,label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--slate)}h2{font-size:12px;margin:24px 0 9px}.card{background:#fff;border:1px solid var(--rule);padding:16px;margin-bottom:14px;border-radius:4px}label{display:block;font-weight:700;margin-bottom:5px}
+input,textarea{width:100%;padding:9px 10px;border:1px solid var(--rule);border-radius:3px;background:#fbfcfb;color:var(--ink);font:15px system-ui}textarea{min-height:62px;resize:vertical}button{padding:10px 14px;border:1px solid var(--ink);border-radius:3px;background:var(--ink);color:#fff;font-weight:700;cursor:pointer}.ghost{background:#fff;color:var(--ink)}.small{padding:7px 9px;font-size:12px}.danger{color:var(--red);border-color:var(--red);background:#fff}
+.legend{font:11px/1.6 ui-monospace,monospace;color:var(--slate);background:var(--soft);border-left:3px solid var(--kelp);padding:8px 10px;margin-bottom:10px}.row{display:grid;grid-template-columns:190px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule)}.row:last-child{border:0}.slot{font:700 12px ui-monospace,monospace;padding-top:8px}.who{display:block;font-size:10px;color:var(--slate);font-weight:400}.reported{background:var(--soft);margin:0 -8px;padding-left:8px;padding-right:8px}.flagged{border-color:var(--amber);background:var(--amberSoft)}.apon{color:var(--slate)}
+.bar{position:sticky;bottom:0;padding:16px 0 8px;background:linear-gradient(transparent,var(--paper) 25%);display:flex;gap:8px;align-items:center}.ok{color:var(--kelp);font:700 12px ui-monospace,monospace}.admin{display:none}.admin.open{display:block}.adminGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.adminItem{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--rule)}.adminItem span{flex:1}.status{font:700 12px ui-monospace,monospace;margin-left:8px}.bad{color:var(--red)}.good{color:var(--kelp)}.muted{font-size:12px;color:var(--slate)}
+#sheet{display:none}@media(max-width:620px){.live{margin-left:0}.row,.adminGrid{grid-template-columns:1fr}.slot{padding-top:0}}@media print{body{background:#fff}.wrap>*:not(#sheet){display:none!important}#sheet{display:block}@page{size:letter portrait;margin:.5in}}#sheet table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}#sheet td{border:1px solid #999;padding:4px 6px}#sheet .k{font-weight:700;background:#f1f4f2}#sheet .band{font:700 9px ui-monospace,monospace;background:#10202b;color:#fff;padding:4px 6px;margin:10px 0 4px}
+</style></head>
+<body><div class="wrap">
+<header class="top"><h1>Shift Report</h1><span class="sub">what the team sent in today</span><span class="live" id="live">loading…</span><button class="ghost small" id="manage">Manage tours</button></header>
+<div class="card"><label>Date</label><input type="date" id="date"></div>
+<div class="card admin" id="admin"><div id="login"><label>Admin password</label><div class="adminGrid"><input type="password" id="pw" autocomplete="current-password"><button id="unlock">Unlock</button></div><span class="status" id="loginStatus"></span></div>
+<div id="panel" hidden><div class="adminGrid"><div><label>Tour name</label><input id="tourName" placeholder="Dolphin Tour"></div><div><label>Times available</label><input id="tourTimes" placeholder="10:30 AM, 1:15 PM"></div></div><p class="muted">Separate multiple times with commas. Leave blank for no fixed time.</p><button id="addTour">Add tour</button><span class="status" id="adminStatus"></span><h2>Active tours</h2><div id="active"></div><div id="inactiveWrap" hidden><h2>Inactive tours</h2><div id="inactive"></div></div></div></div>
+<h2>Tour reports</h2><div class="card"><div class="legend">APON: all present / operational normal · NS: no show · DNS: did not sell</div><div id="slots"></div></div>
+<h2>Your notes</h2><div class="card" id="narrative"></div>
+<div class="bar"><button id="print">Save as PDF</button><button class="ghost" id="refresh">Check for new reports</button><span class="ok" id="saved"></span></div><div id="sheet"></div></div>
 <script>
-const SLOTS = ["PIP 10:30AM","PIP 11:00AM","PIP 1:15","SHARK 11","SHARK 12","SHARK 2:15","SHARK 4:00",
-  "SHARK 5:00","SEALION 1:15","AAT 1:30","BELUGA 2:00","PENGUIN 2:45","PENGUIN 3:45","ALDABRA 11:15",
-  "ALDABRA 2:00","ALDABRA 3:30","KILLER WHALE 2:45","KILLER WHALE 4:45","Fam","UAE","VIP","VIP",
-  "DP ORIENTATION","AAT NON OP","ALL SWIM NON OP","UAE NON OP"];
-
-const NARRATIVE = ["AIC TOP SELLER","WHAT WERE THE HIGHS/LOWS OF THE DAY","HOW WAS THE SCHEDULE AND/OR LOGISTICS?",
-  "WERE THERE ANY INTERFERENCES WITH OTHER DEPARTMENTS?",
-  "WHO DID YOU HAVE FEEDBACK CONVERSATION WITH TODAY? MAKE SURE THEY WERE DOCUMENTED?",
-  "WHICH AUDITS DID YOU CONDUCT & WHAT SCORE WAS RECEIVED?","NOTES FROM DP ORIENTATION:",
-  "WHERE THERE ANY EHS CALLS/VISITS? PLEASE DESCRIBE THE INCIDENT(WITH TIMES)",
-  "QUSTIONS/COMMENTS FOR LEADERSHIP:","ANY GUEST INTERACTIONS/COMPLICATIONS WE NEED TO BE AWARE OF?",
-  "THINGS TO KNOW FOR TOMORROW:","MISC NOTES:"];
-
-const label = i => SLOTS.filter(s => s === SLOTS[i]).length > 1
-  ? `${SLOTS[i]} (${SLOTS.slice(0, i + 1).filter(s => s === SLOTS[i]).length})` : SLOTS[i];
-const $ = s => document.querySelector(s);
-const chicagoToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
-
-let state = { date: chicagoToday(), slots: {}, narrative: {}, who: {}, overrides: {}, reported: new Set() };
-let dirty = false;
-
-/* what a guide sent becomes the line in the report */
-function lineFrom(sub){
-  if(sub.status === "APON") return "APON";
-  if(sub.status === "ISSUE") return sub.note || "See note";
-  return `${sub.note ? sub.note + " " : ""}${sub.status}`.trim();
-}
-
-async function pull(){
-  $("#live").textContent = "loading…";
-  try{
-    const res = await fetch(`/.netlify/functions/day?date=${encodeURIComponent(state.date)}&t=${Date.now()}`, { cache: "no-store" });
-    if(!res.ok) throw new Error(`day endpoint returned ${res.status}`);
-    const day = await res.json();
-
-    // the supervisor's own edits win; a slot nobody touched is APON
-    const edits = day.slots || {};
-    state.overrides = { ...edits };
-    state.narrative = day.narrative || {};
-    state.slots = {}; state.who = {}; state.reported = new Set();
-    (day.submissions || []).forEach(s => {
-      const slotKey = String(s.slot);
-      state.reported.add(slotKey);
-      state.slots[slotKey] = lineFrom(s);
-      if(s.who) state.who[slotKey] = s.who;
-    });
-    Object.entries(edits).forEach(([k, v]) => { if(v) state.slots[k] = v; });
-    SLOTS.forEach((s, i) => { if(!state.slots[i] && !/NON OP/.test(s)) state.slots[i] = "APON"; });
-
-    const n = (day.submissions || []).length;
-    $("#live").textContent = `${n} report${n === 1 ? "" : "s"} in · live v5`;
-    paint();
-  }catch{
-    $("#live").textContent = "offline";
-  }
-}
-
-async function push(){
-  try{
-    await fetch("/api/day", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ date: state.date, narrative: state.narrative, overrides: state.overrides })
-    });
-    $("#saved").textContent = "saved";
-    setTimeout(() => $("#saved").textContent = "", 1200);
-  }catch{}
-}
-const queueSave = () => { dirty = true; };
-setInterval(() => { if(dirty){ dirty = false; push(); } }, 2500);
-
-function build(){
-  $("#date").value = state.date;
-  $("#date").onchange = e => { state.date = e.target.value; pull(); };
-
-  const box = $("#slots");
-  SLOTS.forEach((s, i) => {
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = `<div class="slot">${label(i)}<small class="who" data-w="${i}">not submitted</small></div>
-                     <input type="text" data-k="${i}" placeholder="APON">`;
-    box.appendChild(row);
-  });
-  box.querySelectorAll("input").forEach(inp => inp.oninput = () => {
-    const key = inp.dataset.k;
-    const value = inp.value;
-    state.slots[key] = value;
-    if(value.trim()) state.overrides[key] = value;
-    else delete state.overrides[key];
-    style(inp);
-    queueSave();
-  });
-
-  const nb = $("#narrative");
-  NARRATIVE.forEach((q, i) => {
-    const d = document.createElement("div");
-    d.style.marginBottom = "12px";
-    d.innerHTML = `<label>${q}</label>` +
-      (i === 0 ? `<input type="text" data-n="${i}">` : `<textarea data-n="${i}"></textarea>`);
-    nb.appendChild(d);
-  });
-  nb.querySelectorAll("[data-n]").forEach(el => el.oninput = () => {
-    state.narrative[el.dataset.n] = el.value; queueSave();
-  });
-
-  $("#print").onclick = () => { buildSheet(); window.print(); };
-  $("#refresh").onclick = pull;
-}
-
-function style(inp){
-  const v = (inp.value || "").trim();
-  inp.classList.toggle("apon", !v || /^apon$/i.test(v));
-  inp.classList.toggle("flagged", !!v && !/^apon$/i.test(v));
-}
-
-function paint(){
-  document.querySelectorAll("#slots input").forEach(inp => {
-    inp.value = state.slots[inp.dataset.k] || "";
-    style(inp);
-  });
-  document.querySelectorAll("[data-w]").forEach(el => {
-    const key = String(el.dataset.w);
-    const submitted = state.reported.has(key);
-    const row = el.closest(".row");
-    row.classList.toggle("reported", submitted);
-    row.classList.toggle("unreported", !submitted);
-    el.textContent = submitted
-      ? `✓ submitted${state.who[key] ? " by " + state.who[key] : ""}`
-      : "not submitted";
-  });
-  document.querySelectorAll("[data-n]").forEach(el => el.value = state.narrative[el.dataset.n] || "");
-  $("#date").value = state.date;
-}
-
-function buildSheet(){
-  const pretty = new Date(state.date + "T12:00").toLocaleDateString("en-US",
-    { weekday:"long", month:"long", day:"numeric", year:"numeric" });
-  const narr = NARRATIVE.map((q, i) =>
-    `<tr><td class="k">${q}</td><td>${esc(state.narrative[i] || "")}</td></tr>`).join("");
-  const tours = SLOTS.map((s, i) => {
-    const v = (state.slots[i] || "").trim();
-    const exc = v && !/^apon$/i.test(v);
-    return `<tr class="${exc ? "exc" : ""}"><td class="s">${esc(label(i))}</td><td>${esc(v)}</td></tr>`;
-  }).join("");
-  $("#sheet").innerHTML = `
-    <h3>Shift Report</h3>
-    <div class="date">${pretty}</div>
-    <table>${narr}</table>
-    <div class="band">Tour reports</div>
-    <div class="lg">APON: all present / operational normal &nbsp;&middot;&nbsp; NS: no show &nbsp;&middot;&nbsp; DNS: did not sell</div>
-    <table>${tours}</table>`;
-}
-function esc(s){ return String(s || "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-
-build();
-pull();
-setInterval(pull, 60000);   // new reports land on their own
-</script>
-</body>
-</html>
+const N=["AIC TOP SELLER","WHAT WERE THE HIGHS/LOWS OF THE DAY","HOW WAS THE SCHEDULE AND/OR LOGISTICS?","WERE THERE ANY INTERFERENCES WITH OTHER DEPARTMENTS?","WHO DID YOU HAVE FEEDBACK CONVERSATION WITH TODAY? MAKE SURE THEY WERE DOCUMENTED?","WHICH AUDITS DID YOU CONDUCT & WHAT SCORE WAS RECEIVED?","NOTES FROM DP ORIENTATION:","WHERE THERE ANY EHS CALLS/VISITS? PLEASE DESCRIBE THE INCIDENT(WITH TIMES)","QUSTIONS/COMMENTS FOR LEADERSHIP:","ANY GUEST INTERACTIONS/COMPLICATIONS WE NEED TO BE AWARE OF?","THINGS TO KNOW FOR TOMORROW:","MISC NOTES:"];
+const $=s=>document.querySelector(s), today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"}), esc=s=>String(s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+let tours=[],pw="",dirty=false,state={date:today(),slots:{},narrative:{},who:{},overrides:{},reported:new Set()};
+const label=t=>t.label||`${t.name||"Tour"}${t.time?" "+t.time:""}`.trim();
+const legacy=i=>(tours.find(t=>Number(t.legacyIndex)===Number(i))||{}).id||"";
+const key=k=>tours.some(t=>t.id===String(k))?String(k):(/^\d+$/.test(String(k))?legacy(k)||String(k):String(k));
+const visible=()=>tours.filter(t=>t.active!==false||state.slots[t.id]!==undefined||state.overrides[t.id]!==undefined);
+const line=s=>s.status==="APON"?"APON":s.status==="ISSUE"?(s.note||"See note"):`${s.note?s.note+" ":""}${s.status}`.trim();
+async function loadTours(){const r=await fetch(`/.netlify/functions/tours?t=${Date.now()}`,{cache:"no-store"});if(!r.ok)throw Error();tours=(await r.json()).tours||[]}
+async function pull(){try{$("#live").textContent="loading…";const r=await fetch(`/.netlify/functions/day?date=${encodeURIComponent(state.date)}&t=${Date.now()}`,{cache:"no-store"});if(!r.ok)throw Error();const d=await r.json();state.overrides={};Object.entries(d.slots||{}).forEach(([k,v])=>state.overrides[key(k)]=v);state.narrative=d.narrative||{};state.slots={};state.who={};state.reported=new Set();(d.submissions||[]).forEach(s=>{const k=s.slotId||legacy(s.slot);if(!k)return;state.reported.add(k);state.slots[k]=line(s);if(s.who)state.who[k]=s.who});Object.entries(state.overrides).forEach(([k,v])=>{if(v)state.slots[k]=v});tours.filter(t=>t.active!==false).forEach(t=>{if(!state.slots[t.id]&&!/NON OP/i.test(label(t)))state.slots[t.id]="APON"});$("#live").textContent=`${(d.submissions||[]).length} reports in · live v8`;renderSlots();paintN()}catch{$("#live").textContent="offline"}}
+async function push(){try{await fetch("/api/day",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({date:state.date,narrative:state.narrative,overrides:state.overrides})});$("#saved").textContent="saved";setTimeout(()=>$("#saved").textContent="",1000)}catch{}}
+setInterval(()=>{if(dirty){dirty=false;push()}},2500);
+function style(i){const v=i.value.trim();i.classList.toggle("apon",!v||/^apon$/i.test(v));i.classList.toggle("flagged",!!v&&!/^apon$/i.test(v))}
+function renderSlots(){const box=$("#slots");box.innerHTML="";visible().forEach(t=>{const r=document.createElement("div");r.className="row"+(state.reported.has(t.id)?" reported":"");r.innerHTML=`<div class="slot">${esc(label(t))}<small class="who">${state.reported.has(t.id)?`✓ submitted${state.who[t.id]?" by "+esc(state.who[t.id]):""}`:(t.active===false?"inactive · historical data":"not submitted")}</small></div><input placeholder="APON">`;const i=r.querySelector("input");i.value=state.slots[t.id]||"";style(i);i.oninput=()=>{state.slots[t.id]=i.value;if(i.value.trim())state.overrides[t.id]=i.value;else delete state.overrides[t.id];style(i);dirty=true};box.appendChild(r)})}
+function buildN(){N.forEach((q,i)=>{const d=document.createElement("div");d.style.marginBottom="12px";d.innerHTML=`<label>${q}</label>${i===0?`<input data-n="${i}">`:`<textarea data-n="${i}"></textarea>`}`;$("#narrative").appendChild(d)});document.querySelectorAll("[data-n]").forEach(e=>e.oninput=()=>{state.narrative[e.dataset.n]=e.value;dirty=true})}
+function paintN(){document.querySelectorAll("[data-n]").forEach(e=>e.value=state.narrative[e.dataset.n]||"");$("#date").value=state.date}
+function sheet(){const narr=N.map((q,i)=>`<tr><td class="k">${q}</td><td>${esc(state.narrative[i]||"")}</td></tr>`).join(""),trs=visible().map(t=>`<tr><td class="k">${esc(label(t))}</td><td>${esc(state.slots[t.id]||"")}</td></tr>`).join("");$("#sheet").innerHTML=`<h3>Shift Report</h3><div>${state.date}</div><table>${narr}</table><div class="band">Tour reports</div><table>${trs}</table>`}
+async function unlock(){const s=$("#loginStatus");try{const v=$("#pw").value,r=await fetch("/.netlify/functions/tours",{method:"POST",headers:{"content-type":"application/json","x-admin-password":v},body:"{}"}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Incorrect password");pw=v;$("#login").hidden=true;$("#panel").hidden=false;s.textContent="";renderAdmin()}catch(e){s.className="status bad";s.textContent=e.message}}
+function renderAdmin(){const row=(t,action,text)=>`<div class="adminItem"><span>${esc(label(t))}${t.reportable===false?` <small class="muted">shift only</small>`:""}</span><button class="${action==="remove"?"danger ":"ghost "}small" data-${action}="${esc(t.id)}">${text}</button></div>`;$("#active").innerHTML=tours.filter(t=>t.active!==false).map(t=>row(t,"remove","Remove")).join("");const off=tours.filter(t=>t.active===false);$("#inactive").innerHTML=off.map(t=>row(t,"restore","Restore")).join("");$("#inactiveWrap").hidden=!off.length;document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>toggle(b.dataset.remove,false));document.querySelectorAll("[data-restore]").forEach(b=>b.onclick=()=>toggle(b.dataset.restore,true))}
+async function saveTours(msg){const s=$("#adminStatus");try{s.className="status";s.textContent="saving…";const r=await fetch("/.netlify/functions/tours",{method:"PUT",headers:{"content-type":"application/json","x-admin-password":pw},body:JSON.stringify({tours})}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Could not save");tours=d.tours||tours;s.className="status good";s.textContent=msg;renderAdmin();await pull()}catch(e){s.className="status bad";s.textContent=e.message}}
+async function toggle(id,on){const t=tours.find(x=>x.id===id);if(t){t.active=on;await saveTours(on?"restored":"removed")}}
+async function addTour(){const n=$("#tourName").value.trim(),raw=$("#tourTimes").value.trim(),s=$("#adminStatus");if(!n){s.className="status bad";s.textContent="Add a tour name first";return}const times=raw?raw.split(",").map(x=>x.trim()).filter(Boolean):[""];for(const time of times){const l=`${n}${time?" "+time:""}`.trim();if(tours.some(t=>t.active!==false&&label(t).toLowerCase()===l.toLowerCase())){s.className="status bad";s.textContent=`${l} is already active`;return}tours.push({name:n,time,label:l,aliases:[],active:true,reportable:true})}$("#tourName").value="";$("#tourTimes").value="";await saveTours(times.length>1?`${times.length} times added`:"tour added")}
+async function start(){buildN();$("#date").value=state.date;$("#date").onchange=e=>{state.date=e.target.value;pull()};$("#print").onclick=()=>{sheet();print()};$("#refresh").onclick=pull;$("#manage").onclick=()=>$("#admin").classList.toggle("open");$("#unlock").onclick=unlock;$("#pw").onkeydown=e=>{if(e.key==="Enter")unlock()};$("#addTour").onclick=addTour;await loadTours();await pull()}
+start();setInterval(pull,60000);
+</script></body></html>
