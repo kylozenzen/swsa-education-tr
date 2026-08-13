@@ -86,17 +86,27 @@ export async function saveTourConfig(input) {
   return record;
 }
 
+function configuredAdminPasswords() {
+  return [
+    process.env.SHIFT_ADMIN_PASSWORD,
+    process.env.ARRIVAL_DESK_ADMIN_PASSWORD,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
 export function adminPasswordConfigured() {
-  return Boolean(String(process.env.SHIFT_ADMIN_PASSWORD || ""));
+  return configuredAdminPasswords().length > 0;
 }
 
 export function validAdminPassword(value) {
-  const expected = String(process.env.SHIFT_ADMIN_PASSWORD || "");
-  const supplied = String(value || "");
-  if (!expected || !supplied) return false;
-  const a = Buffer.from(expected);
-  const b = Buffer.from(supplied);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const supplied = String(value || "").trim();
+  if (!supplied) return false;
+  const suppliedBuffer = Buffer.from(supplied);
+  return configuredAdminPasswords().some((expected) => {
+    const expectedBuffer = Buffer.from(expected);
+    return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
+  });
 }
 
 export async function addSubmission(input) {
