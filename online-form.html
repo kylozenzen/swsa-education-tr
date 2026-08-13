@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tour Report</title>
+<style>
+  :root{ --ink:#10202b; --slate:#33505f; --paper:#eef1ee; --card:#fff; --rule:#c9d3d2;
+         --kelp:#1d6b5f; --kelp-soft:#e2efe9; --amber:#8a6212; --alert:#b4441f; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:16px/1.5 ui-sans-serif,system-ui,"Segoe UI",Helvetica,sans-serif}
+  .wrap{max-width:520px;margin:0 auto;padding:22px 16px 60px}
+  header{padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:18px}
+  h1{font-size:21px;margin:0}
+  .sub{font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;
+       letter-spacing:.14em;color:var(--slate)}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:16px}
+  label{display:block;font:600 10px ui-monospace,monospace;text-transform:uppercase;
+        letter-spacing:.1em;color:var(--slate);margin-bottom:6px}
+  select,input,textarea{width:100%;padding:13px 12px;border:1px solid var(--rule);border-radius:4px;
+        font:16px ui-sans-serif,system-ui;background:#fbfcfb;color:var(--ink)}
+  textarea{min-height:96px;resize:vertical}
+  select:focus,input:focus,textarea:focus{outline:2px solid var(--kelp);outline-offset:-1px}
+  .field{margin-bottom:16px}
+  .chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .chip{font:700 15px ui-sans-serif,system-ui;padding:15px 10px;border-radius:4px;text-align:center;
+        border:1px solid var(--rule);background:#fbfcfb;color:var(--slate);cursor:pointer;user-select:none}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip.on[data-s="NS"],.chip.on[data-s="DNS"]{background:var(--amber);border-color:var(--amber)}
+  .chip.on[data-s="ISSUE"]{background:var(--alert);border-color:var(--alert)}
+  button{width:100%;font:700 17px ui-sans-serif,system-ui;padding:16px;border-radius:4px;
+        border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;margin-top:4px}
+  button:disabled{opacity:.55}
+  .hint{font-size:13px;color:var(--slate);margin-top:14px}
+  .done{text-align:center;padding:34px 16px}
+  .done .tick{font-size:44px;color:var(--kelp);line-height:1}
+  .done h2{margin:12px 0 4px;font-size:20px}
+  .done p{color:var(--slate);margin:0 0 20px}
+  .again{background:#fff;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tour Report</h1>
+    <div class="sub">Education &middot; SeaWorld San Antonio</div>
+  </header>
+
+  <div class="card" id="form">
+    <div class="field">
+      <label>Which tour?</label>
+      <select id="slot"></select>
+    </div>
+
+    <div class="field">
+      <label>How did it go?</label>
+      <div class="chips" id="chips">
+        <div class="chip on" data-s="APON">All normal</div>
+        <div class="chip" data-s="NS">No show</div>
+        <div class="chip" data-s="DNS">Did not sell</div>
+        <div class="chip" data-s="ISSUE">Something happened</div>
+      </div>
+    </div>
+
+    <div class="field" id="notewrap" hidden>
+      <label>What happened?</label>
+      <textarea id="note" placeholder="Gandy (2) — called and rescheduled"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="who" placeholder="Arthur" autocomplete="name">
+    </div>
+
+    <button id="send">Send it</button>
+    <p class="hint">All normal? Pick your tour, tap send. That's the whole thing.</p>
+  </div>
+
+  <div class="card done" id="done" hidden>
+    <div class="tick">&#10003;</div>
+    <h2>Got it</h2>
+    <p id="echo"></p>
+    <button class="again" id="again">Report another tour</button>
+  </div>
+</div>
+
+<script>
+const SLOTS = ["PIP 10:30AM","PIP 11:00AM","PIP 1:15","SHARK 11","SHARK 12","SHARK 2:15","SHARK 4:00",
+  "SHARK 5:00","SEALION 1:15","AAT 1:30","BELUGA 2:00","PENGUIN 2:45","PENGUIN 3:45","ALDABRA 11:15",
+  "ALDABRA 2:00","ALDABRA 3:30","KILLER WHALE 2:45","KILLER WHALE 4:45","Fam","UAE","VIP","VIP",
+  "DP ORIENTATION"];
+const label = i => SLOTS.filter(s => s === SLOTS[i]).length > 1
+  ? `${SLOTS[i]} (tour ${SLOTS.slice(0, i + 1).filter(s => s === SLOTS[i]).length})` : SLOTS[i];
+
+const $ = s => document.querySelector(s);
+let status = "APON";
+
+const sel = $("#slot");
+SLOTS.forEach((s, i) => {
+  const o = document.createElement("option");
+  o.value = i; o.textContent = label(i);
+  sel.appendChild(o);
+});
+
+$("#who").value = localStorage.getItem("guide-name") || "";
+
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => {
+  document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
+  c.classList.add("on");
+  status = c.dataset.s;
+  $("#notewrap").hidden = status === "APON";
+});
+
+$("#send").onclick = async () => {
+  const btn = $("#send");
+  const note = $("#note").value.trim();
+  const who = $("#who").value.trim();
+  if(status !== "APON" && !note){ $("#note").focus(); return; }
+
+  btn.disabled = true; btn.textContent = "Sending…";
+  try{
+    const res = await fetch("/api/day", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot: +sel.value, status, note, who })
+    });
+    if(!res.ok) throw new Error();
+    localStorage.setItem("guide-name", who);
+    $("#echo").textContent = `${label(+sel.value)} — ${status === "APON" ? "all normal" : status}`;
+    $("#form").hidden = true;
+    $("#done").hidden = false;
+  }catch{
+    btn.disabled = false;
+    btn.textContent = "Didn't send — tap to try again";
+  }
+};
+
+$("#again").onclick = () => {
+  $("#note").value = "";
+  status = "APON";
+  document.querySelectorAll(".chip").forEach((x, i) => x.classList.toggle("on", i === 0));
+  $("#notewrap").hidden = true;
+  $("#send").disabled = false;
+  $("#send").textContent = "Send it";
+  $("#done").hidden = true;
+  $("#form").hidden = false;
+};
+</script>
+</body>
+</html>
