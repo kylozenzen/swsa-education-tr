@@ -22,7 +22,7 @@ export default async function handler(request) {
 
     if (!adminPasswordConfigured()) {
       return json({
-        error: "Tour admin is not configured. Add SHIFT_ADMIN_PASSWORD in Netlify environment variables.",
+        error: "Tour admin password is not configured. Add SHIFT_ADMIN_PASSWORD or ARRIVAL_DESK_ADMIN_PASSWORD in Netlify environment variables, include Functions scope if available, then redeploy.",
         code: "ADMIN_PASSWORD_NOT_CONFIGURED",
       }, 503);
     }
