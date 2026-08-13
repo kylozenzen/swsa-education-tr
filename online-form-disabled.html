@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tour Report</title>
+<style>
+  :root{ --ink:#10202b; --slate:#33505f; --paper:#eef1ee; --card:#fff; --rule:#c9d3d2;
+         --kelp:#1d6b5f; --kelp-soft:#e2efe9; --amber:#8a6212; --alert:#b4441f; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 ui-sans-serif,system-ui,"Segoe UI",Helvetica,sans-serif}
+  .wrap{max-width:520px;margin:0 auto;padding:22px 16px 60px}
+  header{padding-bottom:12px;border-bottom:2px solid var(--ink);margin-bottom:18px}
+  h1{font-size:21px;margin:0}
+  .sub{font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.14em;color:var(--slate)}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:16px}
+  label{display:block;font:600 10px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--slate);margin-bottom:6px}
+  select,input,textarea{width:100%;padding:13px 12px;border:1px solid var(--rule);border-radius:4px;font:16px ui-sans-serif,system-ui;background:#fbfcfb;color:var(--ink)}
+  textarea{min-height:96px;resize:vertical}
+  .field{margin-bottom:16px}.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}.chip{font:700 15px ui-sans-serif,system-ui;padding:15px 10px;border-radius:4px;text-align:center;border:1px solid var(--rule);background:#fbfcfb;color:var(--slate);cursor:pointer}.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}.chip.on[data-s="NS"],.chip.on[data-s="DNS"]{background:var(--amber);border-color:var(--amber)}.chip.on[data-s="ISSUE"]{background:var(--alert);border-color:var(--alert)}
+  button{width:100%;font:700 17px ui-sans-serif,system-ui;padding:16px;border-radius:4px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;margin-top:4px}.hint{font-size:13px;color:var(--slate);margin-top:14px}.notice{background:#faf0d8;border:1px solid #d7bd7d;padding:12px;margin-bottom:14px;border-radius:4px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Tour Report</h1><div class="sub">Education &middot; SeaWorld San Antonio</div></header>
+  <div class="notice"><strong>Online reporting is currently turned off.</strong> This file is being kept so the form can be re-enabled later.</div>
+  <div class="card" aria-disabled="true" style="opacity:.62;pointer-events:none">
+    <div class="field"><label>Which tour?</label><select><option>Tour reporting disabled</option></select></div>
+    <div class="field"><label>How did it go?</label><div class="chips"><div class="chip on">All normal</div><div class="chip">No show</div><div class="chip">Did not sell</div><div class="chip">Something happened</div></div></div>
+    <div class="field"><label>Your name</label><input type="text" placeholder="Name"></div>
+    <button disabled>Send it</button>
+    <p class="hint">The original web form is intentionally dormant while shift reporting is the default workflow.</p>
+  </div>
+</div>
+</body>
+</html>
