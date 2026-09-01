@@ -66,8 +66,7 @@ function welcomeMessage() {
 }
 
 function tourFormUrl(request) {
-  const configured = String(process.env.TOUR_REPORT_FORM_URL || "").trim();
-  return configured || new URL("/online-form.html", request.url).toString();
+  return new URL("/tour-form", request.url).toString();
 }
 
 function tourFormMessage(request) {
