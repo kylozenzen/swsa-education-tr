@@ -1,7 +1,7 @@
 import { addSubmission, claimCooldown, getTourConfig } from "./_store.mjs";
-import { commandHelp, parseReportMessage } from "./_slots.mjs";
+import { commandHelp, parseReportMessage, tourFormRequest } from "./_slots.mjs";
 
-const VERSION = "groupme-v8-2026-08-13";
+const VERSION = "groupme-v9-2026-09-01-tour-form";
 const json = (data, status = 200) => Response.json(data, {
   status,
   headers: { "cache-control": "no-store" },
@@ -116,7 +116,12 @@ export default async function handler(request) {
         });
       }
 
-      return json({ ok: true, version: VERSION, message: "GroupMe callback endpoint is online." });
+      return json({
+        ok: true,
+        version: VERSION,
+        message: "GroupMe callback endpoint is online.",
+        tourFormPath: "/tour-form",
+      });
     }
 
     if (request.method !== "POST") {
@@ -130,17 +135,27 @@ export default async function handler(request) {
 
     const senderId = String(message.sender_id || message.user_id || "unknown");
     const senderName = message.name || "GroupMe user";
+
+    if (!allowedSender(senderId)) {
+      await safePost(`Sorry ${senderName}, you aren't on the approved reporter list yet.`);
+      return json({ ok: true, version: VERSION, blocked: true });
+    }
+
+    if (tourFormRequest(message.text)) {
+      const cooldown = await claimCooldown({ kind: "tour-form-user", senderId, seconds: 10 });
+      if (!cooldown.allowed) {
+        return json({ ok: true, version: VERSION, action: "tour-form-rate-limited" });
+      }
+      const reply = await safePost(tourFormMessage(request));
+      return json({ ok: true, version: VERSION, action: "tour-form-posted", replyPosted: reply.ok });
+    }
+
     const config = await getTourConfig();
     const reportSlots = config.tours.filter((slot) => slot.active !== false && slot.reportable !== false);
     const parsed = parseReportMessage(message.text, reportSlots);
 
     if (parsed.kind === "ignore") {
       return json({ ok: true, version: VERSION, ignored: true });
-    }
-
-    if (!allowedSender(senderId)) {
-      await safePost(`Sorry ${senderName}, you aren't on the approved reporter list yet.`);
-      return json({ ok: true, version: VERSION, blocked: true });
     }
 
     if (parsed.kind === "help") {
@@ -153,15 +168,6 @@ export default async function handler(request) {
 
       const reply = await safePost(commandHelp(reportSlots));
       return json({ ok: true, version: VERSION, action: "help-posted", replyPosted: reply.ok });
-    }
-
-    if (parsed.kind === "tour-form") {
-      const cooldown = await claimCooldown({ kind: "tour-form-user", senderId, seconds: 10 });
-      if (!cooldown.allowed) {
-        return json({ ok: true, version: VERSION, action: "tour-form-rate-limited" });
-      }
-      const reply = await safePost(tourFormMessage(request));
-      return json({ ok: true, version: VERSION, action: "tour-form-posted", replyPosted: reply.ok });
     }
 
     if (parsed.kind === "error") {

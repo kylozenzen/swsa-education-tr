@@ -1,4 +1,4 @@
-# SWSA Tour Report + GroupMe Bot — v7
+# SWSA Tour Report + GroupMe Bot
 
 GitHub-ready repository for the Tour Report form, Shift Report dashboard, Netlify Blobs storage, and GroupMe bot callback.
 
@@ -18,7 +18,8 @@ Do not place everything inside an extra folder in the repository.
 
 - `GROUPME_BOT_ID`
 - `GROUPME_CALLBACK_KEY`
-- `TOUR_REPORT_FORM_URL` (optional; defaults to `/online-form.html` on the deployed site)
+
+No `TOUR_REPORT_FORM_URL` environment variable is required. The canonical staff form route is `/tour-form`.
 
 ## GroupMe callback URL
 
@@ -30,7 +31,9 @@ Use the direct function URL:
 
 Open the callback URL in a browser. It should return:
 
-`"version":"groupme-v7-2026-07-18"`
+`"version":"groupme-v9-2026-09-01-tour-form"`
+
+This authenticated GET response confirms that Netlify is running the current GroupMe function deployment. It also reports `"tourFormPath":"/tour-form"` without exposing callback credentials or other secrets.
 
 ## Easy report examples
 
@@ -46,6 +49,6 @@ No status defaults to APON. Multiple reports can be sent in one message, one per
 
 ## Sensitive reports
 
-Staff can type `tour form` (or `tourform`, `tour report form`, `report form`, or `private tour form`) in GroupMe. The bot replies with the existing online form URL without creating a report from the command. Normal operational reports continue to use the usual GroupMe workflow.
+Staff can type `tour form` (or `tourform`, `tour report form`, `report form`, or `private tour form`) in GroupMe. The bot replies with the canonical `/tour-form` URL without creating a report from the command. Normal operational reports continue to use the usual GroupMe workflow.
 
 The Shift Report displays only reports actually submitted for the selected date; the year-round Tour Catalog is used for bot recognition and is not a daily operating schedule.
