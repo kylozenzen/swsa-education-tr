@@ -143,6 +143,10 @@ function helpRequest(raw) {
   return /^(?:!?(?:help|commands?)|!(?:report|r)\s+(?:help|commands?))\s*[?.!]*$/i.test(raw.trim());
 }
 
+export function tourFormRequest(raw) {
+  return /^(?:tour\s*form|tour\s+report\s+form|report\s+form|private\s+tour\s+form)\s*[?.!]*$/i.test(cleanInput(raw));
+}
+
 function matchTourAtStart(body, slots) {
   const cleaned = cleanInput(body);
   for (const record of buildAliasRecords(slots)) {
@@ -187,6 +191,7 @@ function looksLikeReportAttempt(raw, slots) {
 export function parseReportCommand(text, slots = DEFAULT_TOURS) {
   const raw = cleanInput(text);
   if (!raw) return { kind: "ignore" };
+  if (tourFormRequest(raw)) return { kind: "tour-form" };
   if (helpRequest(raw)) return { kind: "help" };
 
   const body = stripCommand(raw);
@@ -218,6 +223,7 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
 export function parseReportMessage(text, slots = DEFAULT_TOURS) {
   const raw = cleanInput(text);
   if (!raw) return { kind: "ignore" };
+  if (tourFormRequest(raw)) return { kind: "tour-form" };
   if (helpRequest(raw)) return { kind: "help" };
 
   const lines = raw.split(/\n+/).map((line) => line.trim()).filter(Boolean);
@@ -248,5 +254,6 @@ export function commandHelp(slots = DEFAULT_TOURS) {
     "Add NS or DNS when needed, or describe what happened.",
     "No status = APON.",
     "You can send several reports, one per line.",
+    "Sensitive info? Type “tour form” for the private report form.",
   ].join("\n");
 }
