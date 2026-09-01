@@ -19,8 +19,7 @@ export default async function handler(request) {
     if (request.method === "POST") {
       const input = await request.json().catch(() => ({}));
       const access = request.headers.get("x-admin-password") || "";
-      if (!access) return json({ error: "Online tour reporting is currently disabled." }, 410);
-      if (!validAdminPassword(access)) return json({ error: "Incorrect admin password." }, 401);
+      if (access && !validAdminPassword(access)) return json({ error: "Incorrect admin password." }, 401);
 
       const slotId = String(input.slotId || "").trim();
       const status = String(input.status || "").trim().toUpperCase();
@@ -39,8 +38,8 @@ export default async function handler(request) {
         slot: Number.isInteger(tour.legacyIndex) ? tour.legacyIndex : null,
         status,
         note: input.note,
-        who: input.who || "Supervisor entry",
-        source: "shift-manual",
+        who: input.who || (access ? "Supervisor entry" : "Online form"),
+        source: access ? "shift-manual" : "web",
       });
       return json({ ok: true, ...result }, 201);
     }

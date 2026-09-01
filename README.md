@@ -18,6 +18,7 @@ Do not place everything inside an extra folder in the repository.
 
 - `GROUPME_BOT_ID`
 - `GROUPME_CALLBACK_KEY`
+- `TOUR_REPORT_FORM_URL` (optional; defaults to `/online-form.html` on the deployed site)
 
 ## GroupMe callback URL
 
@@ -41,3 +42,10 @@ Open the callback URL in a browser. It should return:
 - `beluga 2 guest arrived late`
 
 No status defaults to APON. Multiple reports can be sent in one message, one per line.
+
+
+## Sensitive reports
+
+Staff can type `tour form` (or `tourform`, `tour report form`, `report form`, or `private tour form`) in GroupMe. The bot replies with the existing online form URL without creating a report from the command. Normal operational reports continue to use the usual GroupMe workflow.
+
+The Shift Report displays only reports actually submitted for the selected date; the year-round Tour Catalog is used for bot recognition and is not a daily operating schedule.

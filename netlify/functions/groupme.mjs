@@ -65,6 +65,15 @@ function welcomeMessage() {
   ].join("\n");
 }
 
+function tourFormUrl(request) {
+  const configured = String(process.env.TOUR_REPORT_FORM_URL || "").trim();
+  return configured || new URL("/online-form.html", request.url).toString();
+}
+
+function tourFormMessage(request) {
+  return `🔒 If your report includes sensitive guest, employee, medical, incident, or other private information, don't enter the details in GroupMe. Submit it through the Tour Report form: ${tourFormUrl(request)}`;
+}
+
 async function saveOneReport({ parsed, senderName, senderId, sourceId }) {
   return addSubmission({
     slotId: parsed.slotId,
@@ -145,6 +154,15 @@ export default async function handler(request) {
 
       const reply = await safePost(commandHelp(reportSlots));
       return json({ ok: true, version: VERSION, action: "help-posted", replyPosted: reply.ok });
+    }
+
+    if (parsed.kind === "tour-form") {
+      const cooldown = await claimCooldown({ kind: "tour-form-user", senderId, seconds: 10 });
+      if (!cooldown.allowed) {
+        return json({ ok: true, version: VERSION, action: "tour-form-rate-limited" });
+      }
+      const reply = await safePost(tourFormMessage(request));
+      return json({ ok: true, version: VERSION, action: "tour-form-posted", replyPosted: reply.ok });
     }
 
     if (parsed.kind === "error") {
