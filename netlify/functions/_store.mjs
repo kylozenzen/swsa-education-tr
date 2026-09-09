@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { getStore } from "@netlify/blobs";
-import { DEFAULT_TOURS } from "./_slots.mjs";
+import { DEFAULT_TOURS, normalizeOverride, normalizeOverrides } from "./_slots.mjs";
 
 const STORE_NAME = "tour-report-data";
 const TOUR_CONFIG_KEY = "config/tours";
@@ -158,8 +158,10 @@ export async function getDay(date) {
     .filter(Boolean)
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 
+  // Corrections are { text, who, at }; records written before attribution
+  // existed hold a bare string and are read as an unattributed edit.
   const overrides = day.schemaVersion === 2
-    ? (day.overrides || day.slots || {})
+    ? normalizeOverrides(day.overrides || day.slots)
     : {};
 
   return {
@@ -176,15 +178,36 @@ export async function saveDay(date, input) {
     ? input.overrides
     : (input && typeof input.slots === "object" ? input.slots : {});
 
+  const db = store();
+  const stored = (await db.get(`days/${dayDate}`, { type: "json" })) || {};
+  const previous = stored.schemaVersion === 2
+    ? normalizeOverrides(stored.overrides || stored.slots)
+    : {};
+
+  const who = cleanText(input?.who, 120);
+  const at = new Date().toISOString();
+  const overrides = {};
+  for (const [key, value] of Object.entries(requestedOverrides || {})) {
+    const entry = normalizeOverride(value);
+    if (!entry) continue;
+    const prior = previous[key];
+    // A correction is stamped when it first appears or when its text changes.
+    // An unchanged line keeps the supervisor and time already on record, so a
+    // narrative autosave cannot rewrite yesterday's attribution.
+    overrides[key] = prior && prior.text === entry.text
+      ? prior
+      : { text: entry.text, who: who || null, at };
+  }
+
   const record = {
     schemaVersion: 2,
     date: dayDate,
-    overrides: requestedOverrides,
+    overrides,
     narrative: input && typeof input.narrative === "object" ? input.narrative : {},
-    updatedAt: new Date().toISOString(),
+    updatedAt: at,
   };
 
-  await store().setJSON(`days/${dayDate}`, record);
+  await db.setJSON(`days/${dayDate}`, record);
   return record;
 }
 

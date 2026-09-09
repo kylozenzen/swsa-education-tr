@@ -85,6 +85,7 @@ details.day[open] .chev{transform:rotate(90deg);display:inline-block}
 .plain .line{display:flex;justify-content:space-between;gap:10px;font:11px ui-monospace,monospace;padding:5px 8px;border-radius:3px;background:#f7f9f8}
 .plain .line .st{color:var(--kelp);white-space:nowrap}
 .plain.corrections .line .st{white-space:normal;text-align:right}
+.plain .line .st .att{display:block;font-size:10px;color:var(--slate)}
 .plain .line.assumed{background:#fff;border:1px dashed var(--rule)}
 .plain .line.assumed .st{color:var(--slate)}
 .subhead{font:10px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--slate);margin-top:12px}
@@ -143,6 +144,9 @@ details.day[open] .chev{transform:rotate(90deg);display:inline-block}
 const N = ["AIC top seller","What were the highs/lows of the day?","How was the schedule and/or logistics?","Were there any interferences with other departments?","Who did you have a feedback conversation with today? Make sure it was documented.","Which audits did you conduct and what score was received?","Notes from DP orientation","Were there any EHS calls/visits? Please describe the incident (with times).","Questions/comments for leadership","Any guest interactions/complications we need to be aware of?","Things to know for tomorrow","Miscellaneous notes"];
 const STATUS_LABEL = { APON: "APON", NS: "No show", DNS: "Did not sell", ISSUE: "Something happened" };
 const CHIP_LABEL = { NS: "no show", DNS: "did not sell", ISSUE: "issue", APON: "noted" };
+// Where a report came in from. Archives written before source was kept carry
+// none, so the origin is simply left off those.
+const ORIGIN_LABEL = { groupme: "GroupMe", web: "Online form", "shift-manual": "Supervisor addition" };
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -174,6 +178,20 @@ function prettyMonth(m) {
 
 // Older archives stored only exceptions; newer ones store every report.
 function reportsFor(day) { return day.reports || day.exceptions || []; }
+function originOf(r) { return ORIGIN_LABEL[r.source] || String(r.source || "").trim(); }
+function creditLine(r) { return [originOf(r), String(r.who || "").trim()].filter(Boolean).join(" \u00b7 "); }
+function stampTime(iso) {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d) ? d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+}
+// Who changed the official line, and when. Corrections stored before
+// attribution existed carry neither.
+function editedBy(o) {
+  const who = String(o.who || "").trim();
+  const at = stampTime(o.at);
+  if (!who && !at) return "";
+  return `edited by ${who || "a supervisor"}${at ? ` \u00b7 ${at}` : ""}`;
+}
 function isFlagged(r) { return String(r.status || "").toUpperCase() !== "APON" || String(r.note || "").trim().length > 0; }
 
 function stats(record) {
@@ -212,7 +230,7 @@ function flaggedCard(e) {
   return `<div class="exc ${e.status === "NS" || e.status === "DNS" ? "ns" : ""}">
     <div class="excTop"><span class="tourName">${esc(e.tour)}</span><span class="badge">${esc(STATUS_LABEL[e.status] || e.status)}</span></div>
     ${e.note ? `<p class="excNote">${esc(e.note)}</p>` : ""}
-    ${e.who ? `<div class="who">${esc(e.who)}</div>` : ""}
+    ${creditLine(e) ? `<div class="who">${esc(creditLine(e))}</div>` : ""}
   </div>`;
 }
 
@@ -239,13 +257,13 @@ function renderDay(date, day) {
 
   if (overrides.length) {
     body += `<div class="subhead">Supervisor corrections</div><div class="plain corrections">${overrides.map((o) =>
-      `<span class="line"><span>${esc(o.tour)}</span><span class="st">${esc(o.text)}</span></span>`).join("")}</div>`;
+      `<span class="line"><span>${esc(o.tour)}</span><span class="st">${esc(o.text)}${editedBy(o) ? `<span class="att">${esc(editedBy(o))}</span>` : ""}</span></span>`).join("")}</div>`;
   }
 
   if (view === "all") {
     if (normal.length) {
       body += `<div class="subhead">Reported APON</div><div class="plain">${normal.map((r) =>
-        `<span class="line"><span>${esc(r.tour)}</span><span class="st">APON${r.who ? ` · ${esc(r.who)}` : ""}</span></span>`).join("")}</div>`;
+        `<span class="line"><span>${esc(r.tour)}</span><span class="st">APON${creditLine(r) ? ` · ${esc(creditLine(r))}` : ""}</span></span>`).join("")}</div>`;
     }
     if (unreported.length) {
       body += `<div class="subhead">No report submitted — assumed APON</div><div class="plain">${unreported.map((t) =>
@@ -357,18 +375,18 @@ function download(name, text, type) {
 
 // CSV always includes everything, whichever view is on screen.
 function toCsv(record) {
-  const rows = [["date", "weekday", "tour", "status", "flagged", "note", "reported_by", "submitted"]];
+  const rows = [["date", "weekday", "tour", "status", "flagged", "note", "reported_by", "origin", "recorded_at", "submitted"]];
   for (const date of Object.keys(record.days).sort()) {
     const day = record.days[date];
     const wd = weekday(date);
     for (const r of reportsFor(day)) {
-      rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, "yes"]);
+      rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, originOf(r), r.at || "", "yes"]);
     }
     for (const o of day.overrides || []) {
-      rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, "", "no"]);
+      rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, o.who || "", "Supervisor correction", o.at || "", "no"]);
     }
     for (const t of day.unreported || []) {
-      rows.push([date, wd, t, "APON (assumed)", "no", "", "", "no"]);
+      rows.push([date, wd, t, "APON (assumed)", "no", "", "", "", "", "no"]);
     }
   }
   return rows.map((r) => r.map((c) => `"${String(c == null ? "" : c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
