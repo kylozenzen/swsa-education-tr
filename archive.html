@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tour Report Archive</title>
+<style>
+:root{--ink:#10202b;--slate:#46616e;--paper:#eef1ee;--card:#fff;--rule:#c9d3d2;--kelp:#17695b;--soft:#e2efe9;--amber:#8a6212;--amberSoft:#faf0d8;--red:#9b3f32}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:auto;padding:24px 20px 90px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid var(--ink);margin-bottom:16px}
+h1{font-size:23px;margin:0}
+.sub,label,h2,.eyebrow,.count{font-family:ui-monospace,monospace}
+.sub{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--slate)}
+h2,label,.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--slate)}
+h2{font-size:12px;margin:0 0 9px}
+label{display:block;font-weight:700;margin-bottom:6px}
+.card{background:var(--card);border:1px solid var(--rule);padding:16px;border-radius:6px;margin-bottom:16px}
+input,select{width:100%;padding:10px;border:1px solid var(--rule);border-radius:4px;background:#fbfcfb;color:var(--ink);font:15px system-ui}
+button{padding:10px 14px;border:1px solid var(--ink);border-radius:4px;background:var(--ink);color:#fff;font-weight:700;cursor:pointer}
+.ghost{background:#fff;color:var(--ink)}
+.small{padding:7px 10px;font-size:12px}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.row .grow{flex:1;min-width:190px}
+.viewSwitch{display:inline-grid;grid-template-columns:1fr 1fr;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.viewSwitch button{border:0;border-radius:0;background:#fff;color:var(--slate);padding:9px 12px;font-size:12px}
+.viewSwitch button.active{background:var(--soft);color:var(--kelp)}
+.status{font:11px ui-monospace,monospace;color:var(--kelp);margin-top:8px}
+.status.bad{color:var(--red)}
+.banner{font:11px/1.6 ui-monospace,monospace;color:var(--slate);background:var(--soft);border-left:3px solid var(--kelp);padding:9px 11px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:13px}
+.tile .n{font:750 25px/1.1 system-ui;display:block;margin-bottom:3px}
+.tile.warn .n{color:var(--amber)}
+.tile.quiet .n{color:var(--slate)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.charts{grid-template-columns:1fr}}
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:125px 1fr 34px;gap:8px;align-items:center;font:11px ui-monospace,monospace}
+.bar .track{background:#f2f4f3;border-radius:3px;height:15px;overflow:hidden}
+.bar .fill{background:var(--kelp);height:100%;border-radius:3px}
+.bar.amber .fill{background:var(--amber)}
+.bar .v{text-align:right;color:var(--slate)}
+
+/* trend chart */
+.spark{display:flex;gap:2px;align-items:flex-end;height:78px;padding-top:6px}
+.spark button{flex:1;padding:0;border:0;border-radius:2px 2px 0 0;background:var(--kelp);min-height:3px;cursor:pointer;transition:opacity .1s}
+.spark button.zero{background:#dfe5e3}
+.spark button.hot{background:var(--amber)}
+.spark button:hover,.spark button:focus-visible{opacity:.62;outline:none}
+.axis{display:flex;justify-content:space-between;font:10px ui-monospace,monospace;color:var(--slate);margin-top:5px}
+.readout{font:11px ui-monospace,monospace;color:var(--ink);background:#f7f9f8;border:1px solid var(--rule);border-radius:4px;padding:7px 9px;margin-top:9px;min-height:32px}
+.readout .muted{color:var(--slate)}
+.readout b{color:var(--amber)}
+
+/* day accordion */
+.dayControls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:20px 0 10px}
+.dayControls h2{margin:0}
+.dayControls .spacer{margin-left:auto}
+details.day{border:1px solid var(--rule);border-left:5px solid var(--rule);border-radius:6px;background:#fff;margin-bottom:8px;break-inside:avoid}
+details.day.hot{border-left-color:var(--amber)}
+details.day.clear{border-left-color:var(--kelp)}
+details.day.hide{display:none}
+details.day>summary{list-style:none;cursor:pointer;padding:11px 13px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+details.day>summary::-webkit-details-marker{display:none}
+details.day>summary:hover{background:#f7f9f8;border-radius:4px}
+details.day[open]>summary{border-bottom:1px solid var(--rule);border-radius:0}
+.dayDate{font-weight:750;min-width:105px}
+.chip{font:700 10px ui-monospace,monospace;padding:3px 7px;border-radius:999px;background:#f0dfb9;color:var(--amber);white-space:nowrap}
+.chip.ns{background:#f3ddd8;color:var(--red)}
+.chip.ok{background:var(--soft);color:var(--kelp)}
+.chip.note{background:#e9ebf3;color:#4b5070}
+.summaryCount{margin-left:auto;font:11px ui-monospace,monospace;color:var(--slate);white-space:nowrap}
+.chev{font:11px ui-monospace,monospace;color:var(--slate);width:12px}
+details.day[open] .chev{transform:rotate(90deg);display:inline-block}
+.dayBody{padding:13px}
+.exc{border-left:5px solid var(--amber);background:var(--amberSoft);border-radius:4px;padding:10px;margin-bottom:8px}
+.exc.ns{border-left-color:var(--red)}
+.excTop{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.tourName{font-weight:700}
+.badge{font:700 11px ui-monospace,monospace;padding:3px 7px;border-radius:999px;background:#f0dfb9;color:var(--amber);white-space:nowrap}
+.excNote{margin:7px 0 0}
+.who{font:10px ui-monospace,monospace;color:var(--slate);margin-top:6px}
+.plain{display:grid;gap:3px;margin-top:9px}
+.plain .line{display:flex;justify-content:space-between;gap:10px;font:11px ui-monospace,monospace;padding:5px 8px;border-radius:3px;background:#f7f9f8}
+.plain .line .st{color:var(--kelp);white-space:nowrap}
+.plain .line.assumed{background:#fff;border:1px dashed var(--rule)}
+.plain .line.assumed .st{color:var(--slate)}
+.subhead{font:10px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--slate);margin-top:12px}
+.narr{margin-top:11px;border-top:1px dashed var(--rule);padding-top:10px}
+.narr dt{font:700 11px ui-monospace,monospace;color:var(--slate);margin-top:8px}
+.narr dd{margin:3px 0 0;white-space:pre-wrap}
+.clean{font:11px ui-monospace,monospace;color:var(--kelp)}
+.empty{text-align:center;padding:35px 18px;color:var(--slate);border:1px dashed var(--rule);border-radius:5px}
+@media print{
+  body{background:#fff}
+  .noprint{display:none!important}
+  .card,.tile,details.day{border-color:#bbb;box-shadow:none}
+  details.day.hide{display:block!important}
+  .chev{display:none}
+  .wrap{padding:0;max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div><h1>Tour Report Archive</h1><div class="sub">Monthly roll-up</div></div>
+  </div>
+
+  <section class="card noprint" id="gate">
+    <label for="pw">Supervisor password</label>
+    <div class="row">
+      <div class="grow"><input type="password" id="pw" autocomplete="current-password"></div>
+      <button id="unlock">Unlock</button>
+    </div>
+    <div class="status" id="gateStatus"></div>
+  </section>
+
+  <section class="card noprint" id="picker" hidden>
+    <div class="row">
+      <div class="grow">
+        <label for="month">Archived month</label>
+        <select id="month"></select>
+      </div>
+      <div class="viewSwitch" role="tablist" aria-label="Detail level">
+        <button data-view="flagged" class="active">Flagged only</button>
+        <button data-view="all">Every tour</button>
+      </div>
+      <button class="small" id="print">Save as PDF</button>
+      <button class="ghost small" id="csv">Download CSV</button>
+      <button class="ghost small" id="json">Download JSON</button>
+    </div>
+    <div class="status" id="pickStatus"></div>
+  </section>
+
+  <main id="report"></main>
+</div>
+
+<script>
+const N = ["AIC top seller","What were the highs/lows of the day?","How was the schedule and/or logistics?","Were there any interferences with other departments?","Who did you have a feedback conversation with today? Make sure it was documented.","Which audits did you conduct and what score was received?","Notes from DP orientation","Were there any EHS calls/visits? Please describe the incident (with times).","Questions/comments for leadership","Any guest interactions/complications we need to be aware of?","Things to know for tomorrow","Miscellaneous notes"];
+const STATUS_LABEL = { APON: "APON", NS: "No show", DNS: "Did not sell", ISSUE: "Something happened" };
+const CHIP_LABEL = { NS: "no show", DNS: "did not sell", ISSUE: "issue", APON: "noted" };
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let pw = sessionStorage.getItem("archivePw") || "";
+let current = null;
+let view = "flagged";
+let onlyFlaggedDays = false;
+
+const api = (params) =>
+  fetch(`/.netlify/functions/archives?${new URLSearchParams({ password: pw, ...params })}`, { cache: "no-store" })
+    .then(async (r) => {
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw Error(d.error || "Request failed");
+      return d;
+    });
+
+function asUTC(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+const fmt = (iso, opts) => asUTC(iso).toLocaleDateString("en-US", { timeZone: "UTC", ...opts });
+const prettyDate = (iso) => fmt(iso, { weekday: "short", month: "short", day: "numeric" });
+const longDate = (iso) => fmt(iso, { weekday: "long", month: "long", day: "numeric" });
+const weekday = (iso) => fmt(iso, { weekday: "long" });
+function prettyMonth(m) {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" });
+}
+
+// Older archives stored only exceptions; newer ones store every report.
+function reportsFor(day) { return day.reports || day.exceptions || []; }
+function isFlagged(r) { return String(r.status || "").toUpperCase() !== "APON" || String(r.note || "").trim().length > 0; }
+
+function stats(record) {
+  const dates = Object.keys(record.days || {}).sort();
+  const byTour = new Map(), byStatus = new Map(), byWeekday = new Map();
+  let reports = 0, flagged = 0, cleanDays = 0, assumed = 0;
+  const perDay = dates.map((date) => {
+    const day = record.days[date];
+    const list = reportsFor(day).filter(isFlagged);
+    reports += day.totalReports || 0;
+    assumed += (day.unreported || []).length;
+    flagged += list.length;
+    if (!list.length) cleanDays += 1;
+    const wd = weekday(date);
+    byWeekday.set(wd, (byWeekday.get(wd) || 0) + list.length);
+    for (const e of list) {
+      byTour.set(e.tour, (byTour.get(e.tour) || 0) + 1);
+      byStatus.set(e.status, (byStatus.get(e.status) || 0) + 1);
+    }
+    return { date, count: list.length, reported: day.totalReports || 0, assumed: (day.unreported || []).length };
+  });
+  const rank = (map) => [...map.entries()].sort((a, b) => b[1] - a[1]);
+  return { dates, perDay, reports, flagged, cleanDays, assumed, tours: rank(byTour), statuses: rank(byStatus), weekdays: rank(byWeekday) };
+}
+
+function barList(entries, className = "") {
+  if (!entries.length) return '<div class="clean">Nothing recorded.</div>';
+  const max = entries[0][1] || 1;
+  return `<div class="bars">${entries.slice(0, 8).map(([name, n]) => `
+    <div class="bar ${className}"><span title="${esc(name)}">${esc(name)}</span>
+      <span class="track"><span class="fill" style="width:${Math.round((n / max) * 100)}%"></span></span>
+      <span class="v">${n}</span></div>`).join("")}</div>`;
+}
+
+function flaggedCard(e) {
+  return `<div class="exc ${e.status === "NS" || e.status === "DNS" ? "ns" : ""}">
+    <div class="excTop"><span class="tourName">${esc(e.tour)}</span><span class="badge">${esc(STATUS_LABEL[e.status] || e.status)}</span></div>
+    ${e.note ? `<p class="excNote">${esc(e.note)}</p>` : ""}
+    ${e.who ? `<div class="who">${esc(e.who)}</div>` : ""}
+  </div>`;
+}
+
+function renderDay(date, day) {
+  const all = reportsFor(day);
+  const flagged = all.filter(isFlagged);
+  const normal = all.filter((r) => !isFlagged(r));
+  const unreported = day.unreported || [];
+  const narrative = Object.entries(day.narrative || {}).sort((a, b) => Number(a[0]) - Number(b[0]));
+
+  // Scannable chips: one per reason, plus a marker for shift notes.
+  const tally = new Map();
+  for (const f of flagged) tally.set(f.status, (tally.get(f.status) || 0) + 1);
+  let chips = [...tally.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([status, n]) => `<span class="chip ${status === "NS" || status === "DNS" ? "ns" : ""}">${n} ${esc(CHIP_LABEL[status] || status)}${n > 1 && status !== "DNS" && status !== "APON" ? "s" : ""}</span>`)
+    .join("");
+  if (!flagged.length) chips = '<span class="chip ok">all clear</span>';
+  if (narrative.length) chips += `<span class="chip note">shift notes</span>`;
+
+  let body = flagged.length ? flagged.map(flaggedCard).join("") : '<div class="clean">Nothing flagged this day.</div>';
+
+  if (view === "all") {
+    if (normal.length) {
+      body += `<div class="subhead">Reported APON</div><div class="plain">${normal.map((r) =>
+        `<span class="line"><span>${esc(r.tour)}</span><span class="st">APON${r.who ? ` · ${esc(r.who)}` : ""}</span></span>`).join("")}</div>`;
+    }
+    if (unreported.length) {
+      body += `<div class="subhead">No report submitted — assumed APON</div><div class="plain">${unreported.map((t) =>
+        `<span class="line assumed"><span>${esc(t)}</span><span class="st">assumed</span></span>`).join("")}</div>`;
+    }
+  }
+
+  const narr = narrative.length
+    ? `<dl class="narr">${narrative.map(([i, v]) => `<dt>${esc(N[Number(i)] || `Question ${Number(i) + 1}`)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`
+    : "";
+
+  const hidden = onlyFlaggedDays && !flagged.length && !narrative.length;
+
+  return `<details class="day ${flagged.length ? "hot" : "clear"}${hidden ? " hide" : ""}" id="day-${date}" data-flagged="${flagged.length}">
+    <summary>
+      <span class="chev">&#9656;</span>
+      <span class="dayDate">${esc(prettyDate(date))}</span>
+      ${chips}
+      <span class="summaryCount">${all.length} reported${unreported.length ? ` · ${unreported.length} assumed` : ""}</span>
+    </summary>
+    <div class="dayBody">${body}${narr}</div>
+  </details>`;
+}
+
+function render() {
+  const record = current;
+  if (!record) return;
+  const s = stats(record);
+  if (!s.dates.length) {
+    $("#report").innerHTML = '<div class="empty">Nothing archived for this month.</div>';
+    return;
+  }
+  const peak = Math.max(1, ...s.perDay.map((d) => d.count));
+
+  const spark = `<div class="spark">${s.perDay.map((d) =>
+    `<button type="button" class="${d.count === 0 ? "zero" : d.count >= peak && peak > 1 ? "hot" : ""}"
+      style="height:${d.count ? Math.max(9, (d.count / peak) * 100) : 4}%"
+      data-date="${d.date}"
+      title="${esc(longDate(d.date))} — ${d.count} flagged of ${d.reported} reported"
+      aria-label="${esc(longDate(d.date))}, ${d.count} flagged"></button>`
+  ).join("")}</div>
+  <div class="axis"><span>${esc(prettyDate(s.dates[0]))}</span><span>${esc(prettyDate(s.dates[s.dates.length - 1]))}</span></div>
+  <div class="readout" id="readout"><span class="muted">Hover a bar for that day. Click to jump to it.</span></div>`;
+
+  $("#report").innerHTML = `
+    <div class="top" style="border-bottom-width:1px">
+      <div><h1>${esc(prettyMonth(record.month))}</h1>
+      <div class="sub">Archived ${record.archivedAt ? new Date(record.archivedAt).toLocaleDateString() : "—"} · ${record.retentionDays || 30}-day retention · ${view === "all" ? "every tour" : "flagged only"}</div></div>
+    </div>
+    <div class="banner">Every submitted report is kept. Tours listed as <strong>assumed</strong> had no report submitted that day — the shift report treats those as APON by default, which is not the same as a guide confirming it. Full daily reports live in the PDFs saved at close.</div>
+    <div class="tiles">
+      <div class="tile"><span class="n">${s.dates.length}</span><span class="eyebrow">days archived</span></div>
+      <div class="tile"><span class="n">${s.reports}</span><span class="eyebrow">reports submitted</span></div>
+      <div class="tile warn"><span class="n">${s.flagged}</span><span class="eyebrow">flagged</span></div>
+      <div class="tile"><span class="n">${s.cleanDays}</span><span class="eyebrow">clean days</span></div>
+      <div class="tile quiet"><span class="n">${s.assumed}</span><span class="eyebrow">assumed APON</span></div>
+    </div>
+    <div class="card"><h2>Flagged per day</h2>${spark}</div>
+    <div class="charts">
+      <div class="card"><h2>Most flagged tours</h2>${barList(s.tours, "amber")}</div>
+      <div class="card"><h2>By reason</h2>${barList(s.statuses.map(([k, v]) => [STATUS_LABEL[k] || k, v]))}</div>
+    </div>
+    <div class="card"><h2>Flagged by day of week</h2>${barList(s.weekdays, "amber")}</div>
+    <div class="dayControls">
+      <h2>Day by day</h2>
+      <span class="count noprint">${s.dates.length} days · click a row to open</span>
+      <span class="spacer"></span>
+      <button class="ghost small noprint" id="filterDays">${onlyFlaggedDays ? "Show all days" : "Only days with activity"}</button>
+      <button class="ghost small noprint" id="expandAll">Expand all</button>
+      <button class="ghost small noprint" id="collapseAll">Collapse all</button>
+    </div>
+    ${s.dates.map((d) => renderDay(d, record.days[d])).join("")}`;
+
+  wireReport();
+}
+
+function wireReport() {
+  const readout = $("#readout");
+  document.querySelectorAll(".spark button").forEach((b) => {
+    const date = b.dataset.date;
+    const d = current.days[date];
+    const flagged = reportsFor(d).filter(isFlagged);
+    const show = () => {
+      readout.innerHTML = `${esc(longDate(date))} — <b>${flagged.length} flagged</b> of ${d.totalReports || 0} reported` +
+        (flagged.length ? ` · ${esc([...new Set(flagged.map((f) => STATUS_LABEL[f.status] || f.status))].join(", "))}` : ` <span class="muted">· all clear</span>`);
+    };
+    b.addEventListener("mouseenter", show);
+    b.addEventListener("focus", show);
+    b.addEventListener("click", () => {
+      const el = document.getElementById(`day-${date}`);
+      if (!el) return;
+      el.classList.remove("hide");
+      el.open = true;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+  const setAll = (open) => document.querySelectorAll("details.day").forEach((d) => { d.open = open; });
+  $("#expandAll").onclick = () => setAll(true);
+  $("#collapseAll").onclick = () => setAll(false);
+  $("#filterDays").onclick = () => { onlyFlaggedDays = !onlyFlaggedDays; render(); };
+}
+
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// CSV always includes everything, whichever view is on screen.
+function toCsv(record) {
+  const rows = [["date", "weekday", "tour", "status", "flagged", "note", "reported_by", "submitted"]];
+  for (const date of Object.keys(record.days).sort()) {
+    const day = record.days[date];
+    const wd = weekday(date);
+    for (const r of reportsFor(day)) {
+      rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, "yes"]);
+    }
+    for (const t of day.unreported || []) {
+      rows.push([date, wd, t, "APON (assumed)", "no", "", "", "no"]);
+    }
+  }
+  return rows.map((r) => r.map((c) => `"${String(c == null ? "" : c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+}
+
+async function loadMonth(month) {
+  const s = $("#pickStatus");
+  try {
+    s.className = "status"; s.textContent = "loading…";
+    current = await api({ month });
+    render();
+    s.textContent = "";
+  } catch (e) {
+    s.className = "status bad"; s.textContent = e.message;
+  }
+}
+
+async function loadList() {
+  const s = $("#pickStatus");
+  try {
+    s.className = "status"; s.textContent = "loading…";
+    const { months } = await api({});
+    $("#picker").hidden = false;
+    if (!months.length) {
+      $("#month").innerHTML = "";
+      s.textContent = "";
+      $("#report").innerHTML = '<div class="empty">No months have been archived yet. The first roll-up happens once data passes the retention window.</div>';
+      return;
+    }
+    $("#month").innerHTML = months
+      .map((m) => `<option value="${m.month}">${esc(prettyMonth(m.month))} — ${m.flaggedCount} flagged across ${m.dayCount} days</option>`)
+      .join("");
+    s.textContent = "";
+    await loadMonth(months[0].month);
+  } catch (e) {
+    s.className = "status bad"; s.textContent = e.message;
+  }
+}
+
+async function unlock(value) {
+  const s = $("#gateStatus");
+  try {
+    pw = value;
+    s.className = "status"; s.textContent = "checking…";
+    await api({});
+    sessionStorage.setItem("archivePw", pw);
+    $("#gate").hidden = true;
+    s.textContent = "";
+    await loadList();
+  } catch (e) {
+    pw = "";
+    sessionStorage.removeItem("archivePw");
+    $("#gate").hidden = false;
+    s.className = "status bad"; s.textContent = e.message;
+  }
+}
+
+$("#unlock").onclick = () => unlock($("#pw").value);
+$("#pw").onkeydown = (e) => { if (e.key === "Enter") unlock($("#pw").value); };
+$("#month").onchange = (e) => loadMonth(e.target.value);
+$("#print").onclick = () => print();
+$("#csv").onclick = () => current && download(`tour-report-archive-${current.month}.csv`, toCsv(current), "text/csv");
+$("#json").onclick = () => current && download(`tour-report-archive-${current.month}.json`, JSON.stringify(current, null, 2), "application/json");
+document.querySelectorAll("[data-view]").forEach((b) => {
+  b.onclick = () => {
+    view = b.dataset.view;
+    document.querySelectorAll("[data-view]").forEach((x) => x.classList.toggle("active", x === b));
+    render();
+  };
+});
+
+// A collapsed day would print as a blank row, so open everything first.
+let restore = [];
+window.addEventListener("beforeprint", () => {
+  restore = [...document.querySelectorAll("details.day")].map((d) => [d, d.open]);
+  restore.forEach(([d]) => { d.open = true; });
+});
+window.addEventListener("afterprint", () => {
+  restore.forEach(([d, was]) => { d.open = was; });
+  restore = [];
+});
+
+if (pw) unlock(pw);
+</script>
+</body>
+</html>
