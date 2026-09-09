@@ -159,22 +159,71 @@ function matchTourAtStart(body, slots) {
   return null;
 }
 
-const APON_PATTERNS = [/^APON\b/i, /^ALL\s+(?:NORMAL|GOOD)\b/i, /^NORMAL\b/i, /^GOOD\b/i, /^FINE\b/i, /^WENT\s+WELL\b/i, /^NO\s+ISSUES?\b/i, /^OPERATIONAL\s+NORMAL\b/i, /^OK(?:AY)?\b/i];
+// Trailing punctuation is part of the marker so that "apon." does not leave a
+// stray period at the head of the note.
+const APON_PATTERNS = [/^APON\b[.!?,;:]*/i, /^AOPN\b[.!?,;:]*/i, /^A[-.\s]PON\b[.!?,;:]*/i, /^ALL\s+(?:NORMAL|GOOD)\b/i, /^NORMAL\b/i, /^GOOD\b/i, /^FINE\b/i, /^WENT\s+WELL\b/i, /^NO\s+ISSUES?\b/i, /^OPERATIONAL\s+NORMAL\b/i, /^OK(?:AY)?\b/i];
 const NS_PATTERNS = [/^NS\b/i, /^NO[-\s]*SHOW\b/i, /^DID\s+NOT\s+SHOW\b/i, /^DIDN['’]?T\s+SHOW\b/i, /^NEVER\s+SHOWED\b/i];
 const DNS_PATTERNS = [/^DNS\b/i, /^DID\s+NOT\s+SELL\b/i, /^DIDN['’]?T\s+SELL\b/i, /^NOT\s+SOLD\b/i, /^UNSOLD\b/i];
 const ISSUE_PATTERNS = [/^ISSUE\b/i, /^SOMETHING\s+HAPPENED\b/i, /^PROBLEM\b/i];
 
+// "All apon", "was apon", "everything apon" and the usual typos are still just
+// APON, so these markers are matched anywhere in the remainder as whole words.
+const APON_MARKERS = [
+  /\b(?:APON|AOPN)\b[.!?,;:]*/gi,
+  /\bA[-.\s]PON\b[.!?,;:]*/gi,
+  /\bALL\s+NORMAL\b/gi,
+  /\bOPERATIONAL\s+NORMAL\b/gi,
+  /\bNO\s+ISSUES?\b/gi,
+];
+
+// Only ever used to veto a loose APON match. NS, DNS and ISSUE stay anchored to
+// the start of the remainder: "no show" in the middle of a sentence must never
+// quietly reclassify a real issue report.
+const STATUS_MARKERS = [
+  /\bNS\b/i, /\bNO[-\s]*SHOW(?:ED|S|ING)?\b/i, /\bDID\s+NOT\s+SHOW\b/i, /\bDIDN['’]?T\s+SHOW\b/i, /\bNEVER\s+SHOWED\b/i,
+  /\bDNS\b/i, /\bDID\s+NOT\s+SELL\b/i, /\bDIDN['’]?T\s+SELL\b/i, /\bNOT\s+SOLD\b/i, /\bUNSOLD\b/i,
+  /\bISSUES?\b/i, /\bSOMETHING\s+HAPPENED\b/i, /\bPROBLEM\b/i,
+];
+
+const FILLER_WORD = /^(?:ALL|EVERY|EVERYTHING|EVERYONE|TOUR|IT|WE|THE|WAS|WERE|IS|ARE|AND|BUT|SO|STILL|TODAY|GOOD|FINE|NORMAL|OK|OKAY)$/i;
+
+function noteFrom(value) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s:;,.!?—-]+/, "")
+    .replace(/[\s:;,—-]+$/, "")
+    .trim();
+  if (!text) return "";
+  // "all apon" leaves "all" behind, which is filler rather than a note - and a
+  // note is what makes the shift page and the archive flag a report.
+  return text.split(" ").every((word) => FILLER_WORD.test(word)) ? "" : text;
+}
+
+function looseApon(remainder) {
+  let residue = remainder;
+  let matched = false;
+  for (const marker of APON_MARKERS) {
+    const next = residue.replace(marker, " ");
+    if (next !== residue) {
+      matched = true;
+      residue = next;
+    }
+  }
+  if (!matched) return null;
+  if (STATUS_MARKERS.some((pattern) => pattern.test(residue))) return null;
+  return { status: "APON", note: noteFrom(residue) };
+}
+
 function matchStatus(remainder) {
   if (!remainder) return { status: "APON", note: "" };
+  const loose = looseApon(remainder);
+  if (loose) return loose;
   const groups = [["APON", APON_PATTERNS], ["NS", NS_PATTERNS], ["DNS", DNS_PATTERNS], ["ISSUE", ISSUE_PATTERNS]];
   for (const [status, patterns] of groups) {
     for (const pattern of patterns) {
       const match = remainder.match(pattern);
       if (match) {
-        return {
-          status,
-          note: remainder.slice(match[0].length).replace(/^\s*[:;,—-]\s*/, "").trim(),
-        };
+        return { status, note: noteFrom(remainder.slice(match[0].length)) };
       }
     }
   }
@@ -256,4 +305,75 @@ export function commandHelp(slots = DEFAULT_TOURS) {
     "You can send several reports, one per line.",
     "Sensitive info? Type “tour form” for the private report form.",
   ].join("\n");
+}
+
+// --- shared report-view helpers ---------------------------------------------
+// Pure helpers used by the functions and mirrored by shift.html, which cannot
+// import from this directory.
+
+export function tourLabel(tour) {
+  return String(tour?.label || `${tour?.name || "Tour"}${tour?.time ? ` ${tour.time}` : ""}`).trim();
+}
+
+/**
+ * A supervisor correction used to be a bare string per slot. It is now
+ * { text, who, at } so the shift page and the archive can show who changed the
+ * official line and when. A stored string still reads, as an unattributed edit.
+ */
+export function normalizeOverride(value) {
+  if (value === null || value === undefined) return null;
+  const source = typeof value === "object" ? value : { text: value };
+  const text = String(source.text ?? "").trim().slice(0, 1200);
+  if (!text) return null;
+  const who = String(source.who ?? "").trim().slice(0, 120);
+  const at = String(source.at ?? "").trim().slice(0, 40);
+  return { text, who: who || null, at: at || null };
+}
+
+export function normalizeOverrides(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [key, value] of Object.entries(raw)) {
+    const entry = normalizeOverride(value);
+    if (entry) out[key] = entry;
+  }
+  return out;
+}
+
+/** Mirrors shift.html's tourFor(): by slot id first, then the legacy index. */
+export function resolveTour(submission, tours = DEFAULT_TOURS) {
+  const list = Array.isArray(tours) ? tours : [];
+  const byId = submission?.slotId ? list.find((tour) => tour.id === submission.slotId) : null;
+  if (byId) return byId;
+  // Number(null) is 0, so a submission with no slot index would otherwise land
+  // on the tour at legacy index 0.
+  const slot = submission?.slot;
+  if (slot === null || slot === undefined || slot === "") return null;
+  const index = Number(slot);
+  if (!Number.isInteger(index)) return null;
+  return list.find((tour) => Number(tour.legacyIndex) === index) || null;
+}
+
+/**
+ * One group per tour, in submission order. A guide's report and a later
+ * supervisor entry belong to the same tour, not to two unrelated reports.
+ */
+export function groupSubmissions(submissions, tours = DEFAULT_TOURS) {
+  const groups = [];
+  const byKey = new Map();
+  for (const submission of Array.isArray(submissions) ? submissions : []) {
+    const tour = resolveTour(submission, tours);
+    const slot = submission?.slot;
+    const key = tour
+      ? String(tour.id)
+      : (submission?.slotId ? String(submission.slotId) : (slot !== null && slot !== undefined && slot !== "" ? String(slot) : "unknown"));
+    let group = byKey.get(key);
+    if (!group) {
+      group = { key, tour: tour || null, label: tour ? tourLabel(tour) : String(submission?.slotId || "Unknown tour"), entries: [] };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.entries.push(submission);
+  }
+  return groups;
 }

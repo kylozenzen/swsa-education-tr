@@ -47,6 +47,8 @@ export default async function handler(request) {
     if (request.method === "PUT") {
       const input = await request.json();
       const date = validDate(input.date) ? input.date : chicagoToday();
+      // input.who is the supervisor making the edit; saveDay stamps who/at onto
+      // the corrections that are new or whose text changed.
       return json({ ok: true, day: await saveDay(date, input) });
     }
 

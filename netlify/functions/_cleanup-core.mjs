@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { getTourConfig } from "./_store.mjs";
+import { normalizeOverride } from "./_slots.mjs";
 
 // Roll-up logic shared by the scheduled cleanup function and the on-demand
 // run-cleanup endpoint. The underscore prefix keeps this file from being
@@ -115,6 +116,9 @@ async function buildDaySummary(db, date, tours, index) {
         status,
         note,
         who: String(s.who || "").trim(),
+        // Where the report came in from: groupme, web, or shift-manual for a
+        // supervisor addition. The archive labels each report with it.
+        source: String(s.source || "").trim(),
         at: s.createdAt || null,
       };
     });
@@ -124,11 +128,12 @@ async function buildDaySummary(db, date, tours, index) {
   // submission does.
   const overrides = [];
   for (const [key, value] of Object.entries(overridesFrom(dayRecord))) {
-    const text = String(value || "").trim();
-    if (!text) continue;
+    // { text, who, at } now, a bare string on older records.
+    const entry = normalizeOverride(value);
+    if (!entry) continue;
     const tour = index.resolve(key, key);
     if (tour) accountedFor.add(tour.id);
-    overrides.push({ tour: tour ? index.label(tour) : key, text });
+    overrides.push({ tour: tour ? index.label(tour) : key, text: entry.text, who: entry.who || "", at: entry.at || null });
   }
 
   // Tours nobody reported on. The shift report treats these as APON by
