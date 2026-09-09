@@ -13,6 +13,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/run-cleanup"
+  to = "/.netlify/functions/run-cleanup"
+  status = 200
+
+[[redirects]]
   from = "/tour-form"
   to = "/online-form.html"
   status = 200
