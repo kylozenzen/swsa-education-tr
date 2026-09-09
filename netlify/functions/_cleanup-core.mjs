@@ -46,6 +46,36 @@ function isFlagged(status, note) {
   return String(status || "").toUpperCase() !== "APON" || String(note || "").trim().length > 0;
 }
 
+// Mirrors shift.html's tourFor(): byId(s.slotId) || legacy(s.slot). A tour
+// with no legacyIndex is left out of the legacy map so that a submission with
+// no slot index cannot collide with it.
+function tourIndex(tours) {
+  const byId = new Map(tours.map((t) => [t.id, t]));
+  const byLegacy = new Map();
+  for (const t of tours) {
+    if (Number.isInteger(t.legacyIndex)) byLegacy.set(t.legacyIndex, t);
+  }
+
+  return {
+    label: (t) => t.label || t.name || t.id,
+    resolve(slotId, slot) {
+      const direct = slotId ? byId.get(slotId) : null;
+      if (direct) return direct;
+      if (slot === null || slot === undefined || slot === "") return null;
+      const index = Number(slot);
+      return Number.isInteger(index) ? byLegacy.get(index) || null : null;
+    },
+  };
+}
+
+// Supervisor corrections. v2 day records keep them at .overrides; getDay in
+// _store.mjs falls back to .slots and ignores the field on pre-v2 records,
+// so the roll-up reads them the same way.
+function overridesFrom(dayRecord) {
+  if (dayRecord?.schemaVersion !== 2) return {};
+  return dayRecord.overrides || dayRecord.slots || {};
+}
+
 function nonEmptyNarrative(narrative) {
   const out = {};
   for (const [key, value] of Object.entries(narrative || {})) {
@@ -55,7 +85,7 @@ function nonEmptyNarrative(narrative) {
   return out;
 }
 
-async function buildDaySummary(db, date, tours, tourLabels) {
+async function buildDaySummary(db, date, tours, index) {
   const { blobs } = await db.list({ prefix: `submissions/${date}/` });
   const submissions = (
     await Promise.all(blobs.map((blob) => db.get(blob.key, { type: "json" }).catch(() => null)))
@@ -65,6 +95,10 @@ async function buildDaySummary(db, date, tours, tourLabels) {
   const counts = { APON: 0, NS: 0, DNS: 0, ISSUE: 0, OTHER: 0 };
   let flaggedCount = 0;
 
+  // Tours that must not be listed as assumed APON: anything carrying a
+  // submission or a supervisor correction.
+  const accountedFor = new Set();
+
   const reports = submissions
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
     .map((s) => {
@@ -73,8 +107,11 @@ async function buildDaySummary(db, date, tours, tourLabels) {
       if (status in counts) counts[status] += 1;
       else counts.OTHER += 1;
       if (isFlagged(status, note)) flaggedCount += 1;
+      const tour = index.resolve(s.slotId, s.slot);
+      if (tour) accountedFor.add(tour.id);
+      else if (s.slotId) accountedFor.add(s.slotId);
       return {
-        tour: tourLabels.get(s.slotId) || s.slotId || "Unknown tour",
+        tour: tour ? index.label(tour) : s.slotId || "Unknown tour",
         status,
         note,
         who: String(s.who || "").trim(),
@@ -82,12 +119,23 @@ async function buildDaySummary(db, date, tours, tourLabels) {
       };
     });
 
+  // The corrected line a supervisor put on the printed report. Keys are a tour
+  // id or a stringified legacy slot index, so they resolve the same way a
+  // submission does.
+  const overrides = [];
+  for (const [key, value] of Object.entries(overridesFrom(dayRecord))) {
+    const text = String(value || "").trim();
+    if (!text) continue;
+    const tour = index.resolve(key, key);
+    if (tour) accountedFor.add(tour.id);
+    overrides.push({ tour: tour ? index.label(tour) : key, text });
+  }
+
   // Tours nobody reported on. The shift report treats these as APON by
   // default, so they are recorded separately from an actual APON report.
-  const reportedIds = new Set(submissions.map((s) => s.slotId).filter(Boolean));
   const unreported = tours
-    .filter((t) => t.active !== false && t.reportable !== false && !reportedIds.has(t.id))
-    .map((t) => t.label || t.name || t.id);
+    .filter((t) => t.active !== false && t.reportable !== false && !accountedFor.has(t.id))
+    .map((t) => index.label(t));
 
   return {
     summary: {
@@ -95,6 +143,7 @@ async function buildDaySummary(db, date, tours, tourLabels) {
       flaggedCount,
       counts,
       reports,
+      overrides,
       unreported,
       narrative: nonEmptyNarrative(dayRecord.narrative),
     },
@@ -136,7 +185,7 @@ export async function runCleanup() {
 
   const tourConfig = await getTourConfig();
   const tours = tourConfig.tours;
-  const tourLabels = new Map(tours.map((t) => [t.id, t.label || t.name || t.id]));
+  const index = tourIndex(tours);
 
   // Every date that still has raw data and is now past the retention window.
   const staleDates = new Set();
@@ -170,9 +219,14 @@ export async function runCleanup() {
     existing.days = existing.days || {};
 
     for (const date of dates.sort()) {
-      const { summary, keys } = await buildDaySummary(db, date, tours, tourLabels);
+      const { summary, keys } = await buildDaySummary(db, date, tours, index);
       // Only store a day that has something in it, but always clear its raw keys.
-      if (summary.totalReports > 0 || Object.keys(summary.narrative).length > 0) {
+      // A day whose only content is a supervisor correction still has to archive.
+      if (
+        summary.totalReports > 0 ||
+        summary.overrides.length > 0 ||
+        Object.keys(summary.narrative).length > 0
+      ) {
         existing.days[date] = summary;
         archivedDates.push(date);
       }

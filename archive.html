@@ -220,6 +220,7 @@ function renderDay(date, day) {
   const flagged = all.filter(isFlagged);
   const normal = all.filter((r) => !isFlagged(r));
   const unreported = day.unreported || [];
+  const overrides = day.overrides || [];
   const narrative = Object.entries(day.narrative || {}).sort((a, b) => Number(a[0]) - Number(b[0]));
 
   // Scannable chips: one per reason, plus a marker for shift notes.
@@ -233,6 +234,11 @@ function renderDay(date, day) {
   if (narrative.length) chips += `<span class="chip note">shift notes</span>`;
 
   let body = flagged.length ? flagged.map(flaggedCard).join("") : '<div class="clean">Nothing flagged this day.</div>';
+
+  if (overrides.length) {
+    body += `<div class="subhead">Supervisor corrections</div><div class="plain">${overrides.map((o) =>
+      `<span class="line"><span>${esc(o.tour)}</span><span class="st">${esc(o.text)}</span></span>`).join("")}</div>`;
+  }
 
   if (view === "all") {
     if (normal.length) {
@@ -355,6 +361,9 @@ function toCsv(record) {
     const wd = weekday(date);
     for (const r of reportsFor(day)) {
       rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, "yes"]);
+    }
+    for (const o of day.overrides || []) {
+      rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, "", "no"]);
     }
     for (const t of day.unreported || []) {
       rows.push([date, wd, t, "APON (assumed)", "no", "", "", "no"]);
