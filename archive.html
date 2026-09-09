@@ -84,6 +84,7 @@ details.day[open] .chev{transform:rotate(90deg);display:inline-block}
 .plain{display:grid;gap:3px;margin-top:9px}
 .plain .line{display:flex;justify-content:space-between;gap:10px;font:11px ui-monospace,monospace;padding:5px 8px;border-radius:3px;background:#f7f9f8}
 .plain .line .st{color:var(--kelp);white-space:nowrap}
+.plain.corrections .line .st{white-space:normal;text-align:right}
 .plain .line.assumed{background:#fff;border:1px dashed var(--rule)}
 .plain .line.assumed .st{color:var(--slate)}
 .subhead{font:10px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--slate);margin-top:12px}
@@ -220,6 +221,7 @@ function renderDay(date, day) {
   const flagged = all.filter(isFlagged);
   const normal = all.filter((r) => !isFlagged(r));
   const unreported = day.unreported || [];
+  const overrides = day.overrides || [];
   const narrative = Object.entries(day.narrative || {}).sort((a, b) => Number(a[0]) - Number(b[0]));
 
   // Scannable chips: one per reason, plus a marker for shift notes.
@@ -230,9 +232,15 @@ function renderDay(date, day) {
     .map(([status, n]) => `<span class="chip ${status === "NS" || status === "DNS" ? "ns" : ""}">${n} ${esc(CHIP_LABEL[status] || status)}${n > 1 && status !== "DNS" && status !== "APON" ? "s" : ""}</span>`)
     .join("");
   if (!flagged.length) chips = '<span class="chip ok">all clear</span>';
+  if (overrides.length) chips += `<span class="chip note">corrections</span>`;
   if (narrative.length) chips += `<span class="chip note">shift notes</span>`;
 
   let body = flagged.length ? flagged.map(flaggedCard).join("") : '<div class="clean">Nothing flagged this day.</div>';
+
+  if (overrides.length) {
+    body += `<div class="subhead">Supervisor corrections</div><div class="plain corrections">${overrides.map((o) =>
+      `<span class="line"><span>${esc(o.tour)}</span><span class="st">${esc(o.text)}</span></span>`).join("")}</div>`;
+  }
 
   if (view === "all") {
     if (normal.length) {
@@ -249,7 +257,7 @@ function renderDay(date, day) {
     ? `<dl class="narr">${narrative.map(([i, v]) => `<dt>${esc(N[Number(i)] || `Question ${Number(i) + 1}`)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`
     : "";
 
-  const hidden = onlyFlaggedDays && !flagged.length && !narrative.length;
+  const hidden = onlyFlaggedDays && !flagged.length && !narrative.length && !overrides.length;
 
   return `<details class="day ${flagged.length ? "hot" : "clear"}${hidden ? " hide" : ""}" id="day-${date}" data-flagged="${flagged.length}">
     <summary>
@@ -355,6 +363,9 @@ function toCsv(record) {
     const wd = weekday(date);
     for (const r of reportsFor(day)) {
       rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, "yes"]);
+    }
+    for (const o of day.overrides || []) {
+      rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, "", "no"]);
     }
     for (const t of day.unreported || []) {
       rows.push([date, wd, t, "APON (assumed)", "no", "", "", "no"]);
