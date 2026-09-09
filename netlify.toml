@@ -13,6 +13,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/run-cleanup"
+  to = "/.netlify/functions/run-cleanup"
+  status = 200
+
+[[redirects]]
   from = "/tour-form"
   to = "/online-form.html"
   status = 200
@@ -22,6 +27,11 @@
   to = "/shift.html"
   status = 302
 
+[[redirects]]
+  from = "/archive"
+  to = "/archive.html"
+  status = 302
+
 [[headers]]
   for = "/shift.html"
   [headers.values]
@@ -29,5 +39,10 @@
 
 [[headers]]
   for = "/shift"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+
+[[headers]]
+  for = "/archive.html"
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
