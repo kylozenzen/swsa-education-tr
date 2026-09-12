@@ -73,7 +73,7 @@
       <input type="text" id="who" placeholder="Arthur" autocomplete="name">
     </div>
 
-    <button id="send">Send it</button>
+    <button id="send" disabled>Send it</button>
     <p class="hint">All normal? Pick your tour, tap send. That's the whole thing.</p>
   </div>
 
@@ -86,24 +86,20 @@
 </div>
 
 <script>
-const SLOTS = ["PIP 10:30AM","PIP 11:00AM","PIP 1:15","SHARK 11","SHARK 12","SHARK 2:15","SHARK 4:00",
-  "SHARK 5:00","SEALION 1:15","AAT 1:30","BELUGA 2:00","PENGUIN 2:45","PENGUIN 3:45","ALDABRA 11:15",
-  "ALDABRA 2:00","ALDABRA 3:30","KILLER WHALE 2:45","KILLER WHALE 4:45","Fam","UAE","VIP","VIP",
-  "DP ORIENTATION"];
-const label = i => SLOTS.filter(s => s === SLOTS[i]).length > 1
-  ? `${SLOTS[i]} (tour ${SLOTS.slice(0, i + 1).filter(s => s === SLOTS[i]).length})` : SLOTS[i];
-
 const $ = s => document.querySelector(s);
-let status = "APON";
+let status = "APON", tours = [];
 
 const sel = $("#slot");
-SLOTS.forEach((s, i) => {
-  const o = document.createElement("option");
-  o.value = i; o.textContent = label(i);
-  sel.appendChild(o);
-});
+fetch("/.netlify/functions/tours", { cache: "no-store" }).then(r => r.json()).then(data => {
+  tours = (data.tours || []).filter(t => t.active !== false && t.reportable !== false);
+  tours.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t.id; o.textContent = t.label;
+    sel.appendChild(o);
+  });
+  $("#send").disabled = !tours.length;
+}).catch(() => { $("#send").disabled = true; $("#send").textContent = "Form unavailable — try again"; });
 
-// the name sticks, so it's one tap next time
 $("#who").value = localStorage.getItem("guide-name") || "";
 
 document.querySelectorAll(".chip").forEach(c => c.onclick = () => {
@@ -124,11 +120,11 @@ $("#send").onclick = async () => {
     const res = await fetch("/api/day", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slot: +sel.value, status, note, who })
+      body: JSON.stringify({ slotId: sel.value, status, note, who })
     });
     if(!res.ok) throw new Error();
     localStorage.setItem("guide-name", who);
-    $("#echo").textContent = `${label(+sel.value)} — ${status === "APON" ? "all normal" : status}`;
+    $("#echo").textContent = `${tours.find(t => t.id === sel.value)?.label || "Tour"} — ${status === "APON" ? "all normal" : status}`;
     $("#form").hidden = true;
     $("#done").hidden = false;
   }catch{
