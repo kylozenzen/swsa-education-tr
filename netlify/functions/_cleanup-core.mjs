@@ -96,7 +96,7 @@ async function buildDaySummary(db, date, tours, index) {
   const counts = { APON: 0, NS: 0, DNS: 0, ISSUE: 0, OTHER: 0 };
   let flaggedCount = 0;
 
-  // Tours that must not be listed as assumed APON: anything carrying a
+  // Tours that must not be listed as unreported: anything carrying a
   // submission or a supervisor correction.
   const accountedFor = new Set();
 
@@ -136,8 +136,8 @@ async function buildDaySummary(db, date, tours, index) {
     overrides.push({ tour: tour ? index.label(tour) : key, text: entry.text, who: entry.who || "", at: entry.at || null });
   }
 
-  // Tours nobody reported on. The shift report treats these as APON by
-  // default, so they are recorded separately from an actual APON report.
+  // Unreported catalog entries have no known outcome and may not have operated.
+  // Keep them distinct from actual APON submissions.
   const unreported = tours
     .filter((t) => t.active !== false && t.reportable !== false && !accountedFor.has(t.id))
     .map((t) => index.label(t));
