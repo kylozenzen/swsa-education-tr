@@ -86,8 +86,8 @@ details.day[open] .chev{transform:rotate(90deg);display:inline-block}
 .plain .line .st{color:var(--kelp);white-space:nowrap}
 .plain.corrections .line .st{white-space:normal;text-align:right}
 .plain .line .st .att{display:block;font-size:10px;color:var(--slate)}
-.plain .line.assumed{background:#fff;border:1px dashed var(--rule)}
-.plain .line.assumed .st{color:var(--slate)}
+.plain .line.unreported{background:#fff;border:1px dashed var(--rule)}
+.plain .line.unreported .st{color:var(--slate)}
 .subhead{font:10px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--slate);margin-top:12px}
 .narr{margin-top:11px;border-top:1px dashed var(--rule);padding-top:10px}
 .narr dt{font:700 11px ui-monospace,monospace;color:var(--slate);margin-top:8px}
@@ -150,13 +150,13 @@ const ORIGIN_LABEL = { groupme: "GroupMe", web: "Online form", "shift-manual": "
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-let pw = sessionStorage.getItem("archivePw") || "";
+let pw = "";
 let current = null;
 let view = "flagged";
 let onlyFlaggedDays = false;
 
 const api = (params) =>
-  fetch(`/.netlify/functions/archives?${new URLSearchParams({ password: pw, ...params })}`, { cache: "no-store" })
+  fetch(`/.netlify/functions/archives?${new URLSearchParams(params)}`, { cache: "no-store", headers: { "x-admin-password": pw } })
     .then(async (r) => {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw Error(d.error || "Request failed");
@@ -197,12 +197,12 @@ function isFlagged(r) { return String(r.status || "").toUpperCase() !== "APON" |
 function stats(record) {
   const dates = Object.keys(record.days || {}).sort();
   const byTour = new Map(), byStatus = new Map(), byWeekday = new Map();
-  let reports = 0, flagged = 0, cleanDays = 0, assumed = 0;
+  let reports = 0, flagged = 0, cleanDays = 0, unreported = 0;
   const perDay = dates.map((date) => {
     const day = record.days[date];
     const list = reportsFor(day).filter(isFlagged);
     reports += day.totalReports || 0;
-    assumed += (day.unreported || []).length;
+    unreported += (day.unreported || []).length;
     flagged += list.length;
     if (!list.length) cleanDays += 1;
     const wd = weekday(date);
@@ -211,10 +211,10 @@ function stats(record) {
       byTour.set(e.tour, (byTour.get(e.tour) || 0) + 1);
       byStatus.set(e.status, (byStatus.get(e.status) || 0) + 1);
     }
-    return { date, count: list.length, reported: day.totalReports || 0, assumed: (day.unreported || []).length };
+    return { date, count: list.length, reported: day.totalReports || 0, unreported: (day.unreported || []).length };
   });
   const rank = (map) => [...map.entries()].sort((a, b) => b[1] - a[1]);
-  return { dates, perDay, reports, flagged, cleanDays, assumed, tours: rank(byTour), statuses: rank(byStatus), weekdays: rank(byWeekday) };
+  return { dates, perDay, reports, flagged, cleanDays, unreported, tours: rank(byTour), statuses: rank(byStatus), weekdays: rank(byWeekday) };
 }
 
 function barList(entries, className = "") {
@@ -249,7 +249,7 @@ function renderDay(date, day) {
     .sort((a, b) => b[1] - a[1])
     .map(([status, n]) => `<span class="chip ${status === "NS" || status === "DNS" ? "ns" : ""}">${n} ${esc(CHIP_LABEL[status] || status)}${n > 1 && status !== "DNS" && status !== "APON" ? "s" : ""}</span>`)
     .join("");
-  if (!flagged.length) chips = '<span class="chip ok">all clear</span>';
+  if (!flagged.length) chips = '<span class="chip ok">no flagged submissions</span>';
   if (overrides.length) chips += `<span class="chip note">corrections</span>`;
   if (narrative.length) chips += `<span class="chip note">shift notes</span>`;
 
@@ -266,8 +266,8 @@ function renderDay(date, day) {
         `<span class="line"><span>${esc(r.tour)}</span><span class="st">APON${creditLine(r) ? ` · ${esc(creditLine(r))}` : ""}</span></span>`).join("")}</div>`;
     }
     if (unreported.length) {
-      body += `<div class="subhead">No report submitted — assumed APON</div><div class="plain">${unreported.map((t) =>
-        `<span class="line assumed"><span>${esc(t)}</span><span class="st">assumed</span></span>`).join("")}</div>`;
+      body += `<div class="subhead">No report submitted — outcome unknown</div><div class="plain">${unreported.map((t) =>
+        `<span class="line unreported"><span>${esc(t)}</span><span class="st">not reported</span></span>`).join("")}</div>`;
     }
   }
 
@@ -282,7 +282,7 @@ function renderDay(date, day) {
       <span class="chev">&#9656;</span>
       <span class="dayDate">${esc(prettyDate(date))}</span>
       ${chips}
-      <span class="summaryCount">${all.length} reported${unreported.length ? ` · ${unreported.length} assumed` : ""}</span>
+      <span class="summaryCount">${all.length} reported${unreported.length ? ` · ${unreported.length} unreported` : ""}</span>
     </summary>
     <div class="dayBody">${body}${narr}</div>
   </details>`;
@@ -313,13 +313,13 @@ function render() {
       <div><h1>${esc(prettyMonth(record.month))}</h1>
       <div class="sub">Archived ${record.archivedAt ? new Date(record.archivedAt).toLocaleDateString() : "—"} · ${record.retentionDays || 30}-day retention · ${view === "all" ? "every tour" : "flagged only"}</div></div>
     </div>
-    <div class="banner">Every submitted report is kept. Tours listed as <strong>assumed</strong> had no report submitted that day — the shift report treats those as APON by default, which is not the same as a guide confirming it. Full daily reports live in the PDFs saved at close.</div>
+    <div class="banner">Every submitted report is kept. Tours listed as <strong>unreported</strong> had no report submitted that day — the catalog is not the daily schedule, so no outcome or operating status can be inferred. Full daily reports live in the PDFs saved at close.</div>
     <div class="tiles">
       <div class="tile"><span class="n">${s.dates.length}</span><span class="eyebrow">days archived</span></div>
       <div class="tile"><span class="n">${s.reports}</span><span class="eyebrow">reports submitted</span></div>
       <div class="tile warn"><span class="n">${s.flagged}</span><span class="eyebrow">flagged</span></div>
-      <div class="tile"><span class="n">${s.cleanDays}</span><span class="eyebrow">clean days</span></div>
-      <div class="tile quiet"><span class="n">${s.assumed}</span><span class="eyebrow">assumed APON</span></div>
+      <div class="tile"><span class="n">${s.cleanDays}</span><span class="eyebrow">days without flagged submissions</span></div>
+      <div class="tile quiet"><span class="n">${s.unreported}</span><span class="eyebrow">not reported</span></div>
     </div>
     <div class="card"><h2>Flagged per day</h2>${spark}</div>
     <div class="charts">
@@ -348,7 +348,7 @@ function wireReport() {
     const flagged = reportsFor(d).filter(isFlagged);
     const show = () => {
       readout.innerHTML = `${esc(longDate(date))} — <b>${flagged.length} flagged</b> of ${d.totalReports || 0} reported` +
-        (flagged.length ? ` · ${esc([...new Set(flagged.map((f) => STATUS_LABEL[f.status] || f.status))].join(", "))}` : ` <span class="muted">· all clear</span>`);
+        (flagged.length ? ` · ${esc([...new Set(flagged.map((f) => STATUS_LABEL[f.status] || f.status))].join(", "))}` : ` <span class="muted">· no flagged submissions</span>`);
     };
     b.addEventListener("mouseenter", show);
     b.addEventListener("focus", show);
@@ -386,7 +386,7 @@ function toCsv(record) {
       rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, o.who || "", "Supervisor correction", o.at || "", "no"]);
     }
     for (const t of day.unreported || []) {
-      rows.push([date, wd, t, "APON (assumed)", "no", "", "", "", "", "no"]);
+      rows.push([date, wd, t, "NOT REPORTED", "no", "", "", "", "", "no"]);
     }
   }
   return rows.map((r) => r.map((c) => `"${String(c == null ? "" : c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
@@ -432,13 +432,13 @@ async function unlock(value) {
     pw = value;
     s.className = "status"; s.textContent = "checking…";
     await api({});
-    sessionStorage.setItem("archivePw", pw);
+
     $("#gate").hidden = true;
     s.textContent = "";
     await loadList();
   } catch (e) {
     pw = "";
-    sessionStorage.removeItem("archivePw");
+
     $("#gate").hidden = false;
     s.className = "status bad"; s.textContent = e.message;
   }

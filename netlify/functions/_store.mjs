@@ -142,10 +142,10 @@ export async function addSubmission(input) {
   return { submission, duplicate: false };
 }
 
-export async function getDay(date) {
+export async function getDay(date, db = store()) {
   const dayDate = validDate(date) ? date : chicagoToday();
-  const db = store();
-  const day = (await db.get(`days/${dayDate}`, { type: "json" })) || {
+  const stored = await db.getWithMetadata(`days/${dayDate}`, { type: "json" });
+  const day = stored?.data || {
     date: dayDate,
     slots: {},
     narrative: {},
@@ -166,20 +166,24 @@ export async function getDay(date) {
 
   return {
     date: dayDate,
+    version: stored?.etag || null,
     slots: overrides,
     narrative: day.narrative || {},
     submissions,
   };
 }
 
-export async function saveDay(date, input) {
+export async function saveDay(date, input, db = store()) {
   const dayDate = validDate(date) ? date : chicagoToday();
   const requestedOverrides = input && typeof input.overrides === "object"
     ? input.overrides
     : (input && typeof input.slots === "object" ? input.slots : {});
 
-  const db = store();
-  const stored = (await db.get(`days/${dayDate}`, { type: "json" })) || {};
+  const existing = await db.getWithMetadata(`days/${dayDate}`, { type: "json" });
+  if (input.version !== (existing?.etag || null)) {
+    throw Object.assign(new Error("Daily report changed."), { code: "DAY_CONFLICT" });
+  }
+  const stored = existing?.data || {};
   const previous = stored.schemaVersion === 2
     ? normalizeOverrides(stored.overrides || stored.slots)
     : {};
@@ -207,8 +211,11 @@ export async function saveDay(date, input) {
     updatedAt: at,
   };
 
-  await db.setJSON(`days/${dayDate}`, record);
-  return record;
+  const result = await db.setJSON(`days/${dayDate}`, record,
+    existing ? { onlyIfMatch: existing.etag } : { onlyIfNew: true });
+  if (!result.modified) throw Object.assign(new Error("Daily report changed."), { code: "DAY_CONFLICT" });
+  if (!result.etag) throw new Error("Daily report write was not acknowledged.");
+  return { ...record, version: result.etag };
 }
 
 export async function claimCooldown({ kind, senderId = "global", seconds }) {
