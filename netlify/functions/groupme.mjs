@@ -1,7 +1,7 @@
 import { addSubmission, chicagoToday, claimCooldown, getDay, getTourConfig } from "./_store.mjs";
 import { commandHelp, isVipTour, parseReportMessage, pickVipSlot, tourFormRequest } from "./_slots.mjs";
 
-const VERSION = "groupme-v12-2026-10-09-questions";
+const VERSION = "groupme-v13-2026-10-09-chat-safe";
 const json = (data, status = 200) => Response.json(data, {
   status,
   headers: { "cache-control": "no-store" },

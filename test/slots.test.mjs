@@ -329,3 +329,21 @@ test("an orientation summary can contain a question line", () => {
   assert.equal(parsed.orientation, true);
   assert.match(parsed.note, /lanyards\?$/);
 });
+
+// --- General chat -----------------------------------------------------------
+// A tour word in ordinary chat is not a report.
+
+for (const message of ["Shark tank was wild today", "penguin keepers said they're short", "DP's are here early", "Killer whale show was packed", "good morning team!"]) {
+  test(`ignores chat ${JSON.stringify(message)}`, () => {
+    assert.equal(parseReportMessage(message).kind, "ignore");
+  });
+}
+
+test("a timed tour still files with its time", () => {
+  assert.equal(parseReportMessage("shark 11 apon").kind, "report");
+  assert.equal(parseReportMessage("penguin 2:45").kind, "report");
+});
+
+test("a tour word plus an unknown time still gets the warning", () => {
+  assert.equal(parseReportMessage("penguin 9:15 apon").kind, "error");
+});

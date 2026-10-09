@@ -111,6 +111,14 @@ function aliasesFor(slot) {
   for (const alias of [...aliases]) {
     aliases.add(String(alias).replace(/\s*(?:A\.?M\.?|P\.?M\.?)\b/gi, "").trim());
   }
+  // A tour with a set time needs the time: "shark tank was wild" is chat, not
+  // SHARK 11. Untimed tours (Fam, UAE, VIP...) still match on the name.
+  if (slot.time) {
+    const bare = normalizeTour(slot.name);
+    for (const alias of [...aliases]) {
+      if (!/\d/.test(alias) && normalizeTour(alias) === bare) aliases.delete(alias);
+    }
+  }
   return [...aliases].filter(Boolean);
 }
 
@@ -287,9 +295,11 @@ function matchStatus(remainder) {
 
 function looksLikeReportAttempt(raw, slots) {
   if (/^!(?:report|r)\b/i.test(raw)) return true;
-  const firstWord = normalizeTour(stripCommand(raw)).split(" ")[0];
+  const words = normalizeTour(stripCommand(raw)).split(" ");
   const knownStarts = new Set(runtimeSlots(slots).flatMap((slot) => aliasesFor(slot).map((alias) => normalizeTour(alias).split(" ")[0])).filter(Boolean));
-  return knownStarts.has(firstWord);
+  // Only a tour word followed by a time looks like a report gone wrong; a tour
+  // word in ordinary chat ("penguin keepers said...") gets no warning.
+  return knownStarts.has(words[0]) && words.slice(1, 3).some((word) => /^\d/.test(word));
 }
 
 // --- Questions ---------------------------------------------------------------
@@ -354,7 +364,7 @@ export function isOrientationTour(tour) {
   return /\bORIENTATION\b/.test(normalizeTour(tour?.name || ""));
 }
 
-const ORIENTATION_START = /^(?:!(?:report|r)\s+)?(?:dp\s*-?\s*orientations?|orientations?|orient|dpo|dp)\b\s*[:;,—-]?\s*/i;
+const ORIENTATION_START = /^(?:!(?:report|r)\s+)?(?:dp\s*-?\s*orientations?|orientations?|dpo)\b(?!['’])\s*[:;,—-]?\s*/i;
 
 function cleanSummary(lines) {
   return lines
