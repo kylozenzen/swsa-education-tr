@@ -286,3 +286,46 @@ test("tours reported above an orientation line still file on their own", () => {
 test("help explains orientation", () => {
   assert.match(commandHelp(), /orientation/i);
 });
+
+// --- Questions --------------------------------------------------------------
+// Asking about a tour must never file a report.
+
+const questions = [
+  "penguin 2:45 is that still on?",
+  "Question about penguin 2:45 ahsjhdsfajfksdjfbgksjdf",
+  "question - sea lion 1:15 how many guests",
+  "q: shark 11 who has it",
+  "? killer whale 4:45 moved",
+  "vip sarah did they want lunch?",
+  "orientation still at 10?",
+  "does anyone know if beluga 2 is running",
+  "shark 12 anyone covering?? ",
+];
+
+for (const message of questions) {
+  test(`does not file ${JSON.stringify(message)}`, () => {
+    assert.equal(parseReportMessage(message).kind, "ignore");
+  });
+}
+
+test("a question line in a batch is skipped and the reports still file", () => {
+  const parsed = parseReportMessage("penguin 245 apon\nshark 12 is that one ours?\nsea lion 1:15 ns");
+
+  assert.equal(parsed.kind, "batch");
+  assert.deepEqual(parsed.reports.map((r) => r.status), ["APON", "NS"]);
+  assert.equal(parsed.errors.length, 0);
+});
+
+test("a message that opens with question is ignored top to bottom", () => {
+  assert.equal(parseReportMessage("question\npenguin 245 apon").kind, "ignore");
+});
+
+test("help still answers with a question mark", () => {
+  assert.equal(parseReportMessage("help?").kind, "help");
+});
+
+test("an orientation summary can contain a question line", () => {
+  const parsed = parseReportMessage("orientation\n10:30 penguin meet\nwho restocks the lanyards?");
+  assert.equal(parsed.orientation, true);
+  assert.match(parsed.note, /lanyards\?$/);
+});

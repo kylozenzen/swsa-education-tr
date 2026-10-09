@@ -292,11 +292,24 @@ function looksLikeReportAttempt(raw, slots) {
   return knownStarts.has(firstWord);
 }
 
+// --- Questions ---------------------------------------------------------------
+// A question about a tour is chat for people, not a report. Anything that starts
+// with "question" / "q:" / "?" or ends with "?" is left alone, even when it
+// names a tour and time.
+
+const QUESTION_START = /^(?:\?|q\s*[:.\-]|q\s|qq\b|(?:quick\s+)?questions?\b|does\s+any(?:one|body)\b|is\s+any(?:one|body)\b|can\s+(?:someone|somebody|anyone|i|we)\b|who\s+(?:has|is|knows)\b)/i;
+
+export function isQuestion(text) {
+  const value = cleanInput(text);
+  return QUESTION_START.test(value) || /\?\s*[)\]"'!]*\s*$/.test(value);
+}
+
 export function parseReportCommand(text, slots = DEFAULT_TOURS) {
   const raw = cleanInput(text);
   if (!raw) return { kind: "ignore" };
   if (tourFormRequest(raw)) return { kind: "tour-form" };
   if (helpRequest(raw)) return { kind: "help" };
+  if (isQuestion(raw)) return { kind: "ignore", question: true };
 
   const body = stripCommand(raw);
   const tourMatch = matchTourAtStart(body, slots);
@@ -385,8 +398,12 @@ export function parseReportMessage(text, slots = DEFAULT_TOURS) {
   if (!raw) return { kind: "ignore" };
   if (tourFormRequest(raw)) return { kind: "tour-form" };
   if (helpRequest(raw)) return { kind: "help" };
+  // A message that opens as a question is a question top to bottom.
+  if (QUESTION_START.test(raw)) return { kind: "ignore", question: true };
 
   const allLines = raw.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  // "orientation still at 10?" is a question, not the day's summary.
+  if (allLines.length === 1 && isQuestion(allLines[0])) return { kind: "ignore", question: true };
   const orientationAt = allLines.findIndex((line) => ORIENTATION_START.test(line));
   const orientation = orientationAt >= 0 ? parseOrientation(allLines.slice(orientationAt), slots) : null;
   const lines = orientation ? allLines.slice(0, orientationAt) : allLines;
@@ -429,6 +446,7 @@ export function commandHelp(slots = DEFAULT_TOURS) {
     ...(runtimeSlots(slots).some(isOrientationTour) ? ["Orientation: start with “orientation”, then write the day — times and all."] : []),
     ...(runtimeSlots(slots).some(isVipTour) ? ["VIP: add who led it — vip sarah, or vip (sarah jones)."] : []),
     "You can send several reports, one per line.",
+    "Questions are never filed — start with “question” or end with “?”.",
     "Sensitive info? Type “tour form” for the private report form.",
   ].join("\n");
 }
