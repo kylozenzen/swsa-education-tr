@@ -1,7 +1,7 @@
 import { addSubmission, chicagoToday, claimCooldown, getDay, getTourConfig } from "./_store.mjs";
 import { commandHelp, isVipTour, parseReportMessage, pickVipSlot, tourFormRequest } from "./_slots.mjs";
 
-const VERSION = "groupme-v10-2026-10-09-vip-leader";
+const VERSION = "groupme-v11-2026-10-09-orientation-summary";
 const json = (data, status = 200) => Response.json(data, {
   status,
   headers: { "cache-control": "no-store" },
@@ -88,6 +88,11 @@ async function saveOneReport({ parsed, senderName, senderId, sourceId }) {
 }
 
 function confirmationLine(parsed, duplicate = false) {
+  if (parsed.orientation) {
+    const lines = parsed.note ? parsed.note.split("\n").length : 0;
+    const status = parsed.status === "APON" ? "" : ` ${parsed.status}`;
+    return `${duplicate ? "↩️" : "✅"} ${parsed.label}${status}: ${lines ? `day summary saved (${lines} line${lines === 1 ? "" : "s"})` : "saved — no summary yet"}`;
+  }
   const statusText = parsed.status === "APON" ? "APON" : parsed.status;
   const note = parsed.note ? ` — ${parsed.note}` : "";
   const leader = parsed.vip ? (parsed.leader ? ` (led by ${parsed.leader})` : " (who led it? send: vip name)") : "";

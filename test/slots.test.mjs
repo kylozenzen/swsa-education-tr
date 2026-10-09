@@ -233,3 +233,56 @@ test("pickVipSlot fills open VIP slots in order and keeps a leader on their slot
 test("help mentions how to report a VIP leader", () => {
   assert.match(commandHelp(), /vip sarah/i);
 });
+
+// --- Orientation summary ----------------------------------------------------
+// "Orientation" once, then the whole day: times and tour names stay in the note.
+
+test("a multi-line orientation summary is one report, not a batch of tours", () => {
+  const parsed = parseReportMessage([
+    "Orientation",
+    "10:30 sea lion 1:15 meet & greet - 12 DPs",
+    "penguin 2:45 great group",
+    "1:15 shark ns",
+  ].join("\n"));
+
+  assert.equal(parsed.kind, "report");
+  assert.equal(parsed.orientation, true);
+  assert.equal(parsed.label, "DP ORIENTATION");
+  assert.equal(parsed.status, "APON");
+  assert.equal(parsed.note, "10:30 sea lion 1:15 meet & greet - 12 DPs\npenguin 2:45 great group\n1:15 shark ns");
+});
+
+for (const start of ["orientation", "Orientation:", "DP orientation", "dp orientation -", "DPO", "orientations"]) {
+  test(`${JSON.stringify(start)} starts an orientation summary`, () => {
+    const parsed = parseReportMessage(`${start} 9:00 welcome, 11:15 aldabra feed`);
+
+    assert.equal(parsed.orientation, true);
+    assert.equal(parsed.status, "APON");
+    assert.equal(parsed.note, "9:00 welcome, 11:15 aldabra feed");
+  });
+}
+
+test("a free-text orientation summary is APON, not an issue", () => {
+  const parsed = parseReportMessage("orientation\ngroup was quiet, ran 10 min long at 2:00");
+  assert.equal(parsed.status, "APON");
+});
+
+test("orientation can still be a no show or did not sell", () => {
+  assert.equal(parseReportMessage("orientation ns").status, "NS");
+  assert.equal(parseReportMessage("orientation dns").status, "DNS");
+  assert.equal(parseReportMessage("orientation apon").note, "");
+});
+
+test("tours reported above an orientation line still file on their own", () => {
+  const parsed = parseReportMessage("penguin 245 apon\norientation\n10:30 penguin meet\n2:00 beluga");
+
+  assert.equal(parsed.kind, "batch");
+  assert.equal(parsed.reports.length, 2);
+  assert.match(parsed.reports[0].label, /penguin/i);
+  assert.equal(parsed.reports[1].orientation, true);
+  assert.equal(parsed.reports[1].note, "10:30 penguin meet\n2:00 beluga");
+});
+
+test("help explains orientation", () => {
+  assert.match(commandHelp(), /orientation/i);
+});

@@ -69,7 +69,7 @@
     </div>
 
     <div class="field" id="notewrap" hidden>
-      <label>What happened?</label>
+      <label id="notelabel">What happened?</label>
       <textarea id="note" placeholder="Gandy (2) — called and rescheduled"></textarea>
     </div>
 
@@ -111,14 +111,22 @@ $("#who").value = localStorage.getItem("guide-name") || "";
 // VIP tours have no set time, so the form asks who led it.
 const isVip = t => String(t?.name || "").trim().toUpperCase() === "VIP";
 const selectedTour = () => tours.find(t => t.id === sel.value);
-function syncLeader(){ $("#leaderwrap").hidden = !isVip(selectedTour()); }
+// Orientation is a summary of the whole day, so the note box is always open.
+const isOrientation = t => /\bORIENTATION\b/i.test(String(t?.name || ""));
+function syncNote(){
+  const o = isOrientation(selectedTour());
+  $("#notewrap").hidden = !o && status === "APON";
+  $("#notelabel").textContent = o ? "Day summary (times and all)" : "What happened?";
+  $("#note").rows = o ? 8 : 3;
+}
+function syncLeader(){ $("#leaderwrap").hidden = !isVip(selectedTour()); syncNote(); }
 sel.onchange = syncLeader;
 
 document.querySelectorAll(".chip").forEach(c => c.onclick = () => {
   document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
   c.classList.add("on");
   status = c.dataset.s;
-  $("#notewrap").hidden = status === "APON";
+  syncNote();
 });
 
 $("#send").onclick = async () => {
@@ -128,7 +136,7 @@ $("#send").onclick = async () => {
   const vip = isVip(selectedTour());
   const leader = vip ? $("#leader").value.trim() : "";
   if(vip && !leader){ $("#leader").focus(); return; }
-  if(status !== "APON" && !note){ $("#note").focus(); return; }
+  if((status !== "APON" || isOrientation(selectedTour())) && !note){ $("#note").focus(); return; }
 
   btn.disabled = true; btn.textContent = "Sending…";
   try{
@@ -153,7 +161,7 @@ $("#again").onclick = () => {
   $("#leader").value = "";
   status = "APON";
   document.querySelectorAll(".chip").forEach((x, i) => x.classList.toggle("on", i === 0));
-  $("#notewrap").hidden = true;
+  syncNote();
   $("#send").disabled = false;
   $("#send").textContent = "Send it";
   $("#done").hidden = true;

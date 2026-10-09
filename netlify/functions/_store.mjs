@@ -130,7 +130,7 @@ export async function addSubmission(input) {
     slotId: cleanId(input.slotId),
     slot: Number.isInteger(legacySlot) && legacySlot >= 0 ? legacySlot : null,
     status: cleanText(input.status, 20).toUpperCase(),
-    note: cleanText(input.note, 1200),
+    note: cleanText(input.note, 4000),
     who: cleanText(input.who, 120),
     // VIP tours: the guide who led it (may differ from who reported it).
     leader: cleanText(input.leader, 60),

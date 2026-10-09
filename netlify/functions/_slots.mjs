@@ -332,13 +332,74 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
   };
 }
 
+// --- Orientation summary ------------------------------------------------------
+// Orientation is one report for the whole day. "Orientation" starts it and
+// everything after it - times, tour names, other lines - is the summary, so a
+// line like "penguin 2:45 great group" under it is never filed as its own tour.
+
+export function isOrientationTour(tour) {
+  return /\bORIENTATION\b/.test(normalizeTour(tour?.name || ""));
+}
+
+const ORIENTATION_START = /^(?:!(?:report|r)\s+)?(?:dp\s*-?\s*orientations?|orientations?|orient|dpo|dp)\b\s*[:;,—-]?\s*/i;
+
+function cleanSummary(lines) {
+  return lines
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 4000);
+}
+
+export function parseOrientation(lines, slots = DEFAULT_TOURS) {
+  const tour = runtimeSlots(slots).find(isOrientationTour);
+  if (!tour) return null;
+  const first = String(lines[0] || "").replace(ORIENTATION_START, "");
+  let summary = cleanSummary([first, ...lines.slice(1)]);
+  let status = "APON";
+  // Only an explicit NS or DNS up front changes the status. Anything else is
+  // the day's summary, not an issue.
+  for (const [code, patterns] of [["NS", NS_PATTERNS], ["DNS", DNS_PATTERNS]]) {
+    const hit = patterns.map((pattern) => summary.match(pattern)).find(Boolean);
+    if (hit) {
+      status = code;
+      summary = summary.slice(hit[0].length).replace(/^[\s:;,.!?—-]+/, "");
+      break;
+    }
+  }
+  const apon = summary.match(/^(?:APON|AOPN|A[-.\s]PON)\b[.!?,;:]*\s*/i);
+  if (apon) summary = summary.slice(apon[0].length);
+  return {
+    kind: "report",
+    slotId: tour.id,
+    slot: Number.isInteger(tour.legacyIndex) ? tour.legacyIndex : null,
+    status,
+    note: summary.trim(),
+    label: tour.label,
+    orientation: true,
+  };
+}
+
 export function parseReportMessage(text, slots = DEFAULT_TOURS) {
   const raw = cleanInput(text);
   if (!raw) return { kind: "ignore" };
   if (tourFormRequest(raw)) return { kind: "tour-form" };
   if (helpRequest(raw)) return { kind: "help" };
 
-  const lines = raw.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const allLines = raw.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const orientationAt = allLines.findIndex((line) => ORIENTATION_START.test(line));
+  const orientation = orientationAt >= 0 ? parseOrientation(allLines.slice(orientationAt), slots) : null;
+  const lines = orientation ? allLines.slice(0, orientationAt) : allLines;
+
+  if (orientation) {
+    if (lines.length === 0) return orientation;
+    const before = parseReportMessage(lines.join("\n"), slots);
+    if (before.kind === "report") return { kind: "batch", reports: [before, orientation], errors: [] };
+    if (before.kind === "batch") return { kind: "batch", reports: [...before.reports, orientation], errors: before.errors };
+    if (before.kind === "error") return { kind: "batch", reports: [orientation], errors: [{ line: lines[0], message: before.message }] };
+    return orientation;
+  }
+
   if (lines.length === 1) return parseReportCommand(lines[0], slots);
 
   const reports = [];
@@ -365,6 +426,7 @@ export function commandHelp(slots = DEFAULT_TOURS) {
     "",
     "Add NS or DNS when needed, or describe what happened.",
     "No status = APON.",
+    ...(runtimeSlots(slots).some(isOrientationTour) ? ["Orientation: start with “orientation”, then write the day — times and all."] : []),
     ...(runtimeSlots(slots).some(isVipTour) ? ["VIP: add who led it — vip sarah, or vip (sarah jones)."] : []),
     "You can send several reports, one per line.",
     "Sensitive info? Type “tour form” for the private report form.",
