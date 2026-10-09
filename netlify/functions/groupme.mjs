@@ -1,7 +1,7 @@
-import { addSubmission, claimCooldown, getTourConfig } from "./_store.mjs";
-import { commandHelp, parseReportMessage, tourFormRequest } from "./_slots.mjs";
+import { addSubmission, chicagoToday, claimCooldown, getDay, getTourConfig } from "./_store.mjs";
+import { commandHelp, isVipTour, parseReportMessage, pickVipSlot, tourFormRequest } from "./_slots.mjs";
 
-const VERSION = "groupme-v9-2026-09-01-tour-form";
+const VERSION = "groupme-v10-2026-10-09-vip-leader";
 const json = (data, status = 200) => Response.json(data, {
   status,
   headers: { "cache-control": "no-store" },
@@ -79,6 +79,7 @@ async function saveOneReport({ parsed, senderName, senderId, sourceId }) {
     slot: parsed.slot,
     status: parsed.status,
     note: parsed.note,
+    leader: parsed.leader || "",
     who: senderName,
     source: "groupme",
     sourceId,
@@ -89,7 +90,8 @@ async function saveOneReport({ parsed, senderName, senderId, sourceId }) {
 function confirmationLine(parsed, duplicate = false) {
   const statusText = parsed.status === "APON" ? "APON" : parsed.status;
   const note = parsed.note ? ` — ${parsed.note}` : "";
-  return `${duplicate ? "↩️" : "✅"} ${parsed.label}: ${statusText}${note}`;
+  const leader = parsed.vip ? (parsed.leader ? ` (led by ${parsed.leader})` : " (who led it? send: vip name)") : "";
+  return `${duplicate ? "↩️" : "✅"} ${parsed.label}${leader}: ${statusText}${note}`;
 }
 
 export default async function handler(request) {
@@ -177,6 +179,26 @@ export default async function handler(request) {
     }
 
     const reports = parsed.kind === "batch" ? parsed.reports : [parsed];
+
+    // A bare "VIP name" goes to the VIP slot that name already holds today, or
+    // the next open one. Reports placed earlier in this same message count too.
+    if (reports.some((report) => report.autoSlot)) {
+      const vipSlots = reportSlots.filter(isVipTour);
+      const today = await getDay(chicagoToday());
+      const placed = [...today.submissions];
+      for (const report of reports) {
+        if (!report.vip) continue;
+        if (report.autoSlot) {
+          const slot = pickVipSlot(vipSlots, placed, report.leader);
+          if (slot) {
+            report.slotId = slot.id;
+            report.slot = Number.isInteger(slot.legacyIndex) ? slot.legacyIndex : null;
+            report.label = slot.label;
+          }
+        }
+        placed.push({ slotId: report.slotId, slot: report.slot, leader: report.leader });
+      }
+    }
     const baseSourceId = String(message.id || message.source_guid || Date.now());
     const confirmations = [];
 

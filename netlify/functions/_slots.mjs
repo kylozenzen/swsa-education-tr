@@ -153,10 +153,65 @@ function matchTourAtStart(body, slots) {
     const match = cleaned.match(record.regex);
     if (match) {
       const remainder = cleaned.slice(match[0].length).replace(/^\s*[:;,—-]\s*/, "").trim();
-      return { slot: record.slot, remainder };
+      return { slot: record.slot, alias: record.alias, remainder };
     }
   }
   return null;
+}
+
+// --- VIP leader ---------------------------------------------------------------
+// VIP tours have no set time, so guides send "VIP Sarah" (or "VIP (Sarah Jones)")
+// and the name is who led it. Any tour whose name is VIP works this way.
+
+export function isVipTour(tour) {
+  return normalizeTour(tour?.name || "") === "VIP";
+}
+
+// Words that start a status or a note, so they are never read as a name.
+const NOT_A_NAME = /^(?:APON|AOPN|A[-.]?PON|NS|DNS|ISSUES?|NO|NOT|DID|DIDNT|NEVER|UNSOLD|ALL|EVERY|EVERYTHING|EVERYONE|OK|OKAY|GOOD|FINE|NORMAL|WENT|SOMETHING|PROBLEM|OPERATIONAL|THE|WAS|WERE|IT|TOUR|GUEST|GUESTS|AND|BUT|WITH|LED|BY|HELP)$/i;
+
+function cleanLeader(value) {
+  return String(value || "").replace(/[^\p{L}\p{N}'.\- ]/gu, "").replace(/\s+/g, " ").trim().slice(0, 60);
+}
+
+/**
+ * Pull the leader's name off the front of a VIP report.
+ *   "(Sarah Jones) apon"   -> Sarah Jones   (parentheses = any length name)
+ *   "led by Sarah ns"      -> Sarah
+ *   "Sarah apon"           -> Sarah         (one word without parentheses)
+ *   "apon"                 -> no name
+ */
+export function extractLeader(remainder) {
+  const text = String(remainder || "").trim();
+  const paren = text.match(/^[([]\s*([^)\]]{1,60}?)\s*[)\]]\s*[:;,—-]?\s*/);
+  if (paren) {
+    const leader = cleanLeader(paren[1]);
+    if (leader) return { leader, rest: text.slice(paren[0].length).trim() };
+  }
+  const word = text.match(/^(?:(?:led\s+by|with|guide)\s*:?\s+)?([\p{L}][\p{L}'.-]*)\s*[:;,—-]?\s*/iu);
+  if (word && (/^(?:led|with|guide)\b/i.test(word[0]) || !NOT_A_NAME.test(word[1].replace(/['.-]/g, "")))) {
+    const leader = cleanLeader(word[1]);
+    if (leader) return { leader, rest: text.slice(word[0].length).trim() };
+  }
+  return { leader: "", rest: text };
+}
+
+/**
+ * Which VIP slot a new report fills. A leader already on a VIP today keeps that
+ * slot (a follow-up report); otherwise the first VIP slot nobody has reported;
+ * once every slot is taken, the last one.
+ */
+export function pickVipSlot(vipSlots, submissions, leader) {
+  const list = Array.isArray(vipSlots) ? vipSlots : [];
+  if (!list.length) return null;
+  const subs = Array.isArray(submissions) ? submissions : [];
+  const onSlot = (slot) => subs.filter((s) => resolveTour(s, list)?.id === slot.id);
+  const key = String(leader || "").trim().toLowerCase();
+  if (key) {
+    const same = list.find((slot) => onSlot(slot).some((s) => String(s.leader || "").trim().toLowerCase() === key));
+    if (same) return same;
+  }
+  return list.find((slot) => onSlot(slot).length === 0) || list[list.length - 1];
 }
 
 // Trailing punctuation is part of the marker so that "apon." does not leave a
@@ -250,7 +305,9 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
     return { kind: "error", message: `I couldn't match “${raw.slice(0, 60)}”. Send “help” for examples.` };
   }
 
-  const parsedStatus = matchStatus(tourMatch.remainder);
+  const vip = isVipTour(tourMatch.slot);
+  const { leader, rest } = vip ? extractLeader(tourMatch.remainder) : { leader: "", rest: tourMatch.remainder };
+  const parsedStatus = matchStatus(rest);
   if (!VALID_STATUSES.has(parsedStatus.status)) {
     return { kind: "error", message: "Use APON, NS, DNS, or describe what happened." };
   }
@@ -266,6 +323,12 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
     status: parsedStatus.status,
     note: parsedStatus.note,
     label: slot.label,
+    ...(vip ? {
+      vip: true,
+      leader,
+      // "VIP 1" / "VIP 2" pins a slot; a bare "VIP" is placed by pickVipSlot.
+      autoSlot: normalizeTour(tourMatch.alias) === "VIP",
+    } : {}),
   };
 }
 
@@ -302,6 +365,7 @@ export function commandHelp(slots = DEFAULT_TOURS) {
     "",
     "Add NS or DNS when needed, or describe what happened.",
     "No status = APON.",
+    ...(runtimeSlots(slots).some(isVipTour) ? ["VIP: add who led it — vip sarah, or vip (sarah jones)."] : []),
     "You can send several reports, one per line.",
     "Sensitive info? Type “tour form” for the private report form.",
   ].join("\n");

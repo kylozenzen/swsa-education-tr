@@ -38,6 +38,7 @@ export default async function handler(request) {
         slot: Number.isInteger(tour.legacyIndex) ? tour.legacyIndex : null,
         status,
         note: input.note,
+        leader: input.leader,
         who: input.who || (access ? "Supervisor entry" : "Online form"),
         source: access ? "shift-manual" : "web",
       });

@@ -116,6 +116,7 @@ async function buildDaySummary(db, date, tours, index) {
         status,
         note,
         who: String(s.who || "").trim(),
+        leader: String(s.leader || "").trim(),
         // Where the report came in from: groupme, web, or shift-manual for a
         // supervisor addition. The archive labels each report with it.
         source: String(s.source || "").trim(),

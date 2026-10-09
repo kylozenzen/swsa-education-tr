@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { groupSubmissions, normalizeOverride, normalizeOverrides, parseReportMessage, tourFormRequest } from "../netlify/functions/_slots.mjs";
+import { DEFAULT_TOURS, commandHelp, extractLeader, groupSubmissions, isVipTour, normalizeOverride, normalizeOverrides, parseReportMessage, pickVipSlot, tourFormRequest } from "../netlify/functions/_slots.mjs";
 
 const tourFormCommands = [
   "tour form",
@@ -162,4 +162,74 @@ test("keeps an unknown tour out of the resolved groups instead of merging it", (
   assert.equal(groups[0].key, "custom-gone");
   assert.equal(groups[0].tour, null);
   assert.equal(groups[0].entries.length, 2);
+});
+
+// --- VIP leader -------------------------------------------------------------
+// VIP tours have no time, so guides send "VIP <name>" and the name is who led it.
+
+const vipCases = [
+  ["vip sarah", "sarah", "APON", ""],
+  ["VIP Sarah apon", "Sarah", "APON", ""],
+  ["VIP (Sarah Jones)", "Sarah Jones", "APON", ""],
+  ["VIP (Sarah Jones) ns", "Sarah Jones", "NS", ""],
+  ["vip - marcus dns", "marcus", "DNS", ""],
+  ["vip led by Marcus guest was 20 min late", "Marcus", "ISSUE", "guest was 20 min late"],
+  ["VIP Dana: apon. guests loved the sloths", "Dana", "APON", "guests loved the sloths"],
+  ["vip apon", "", "APON", ""],
+  ["vip ns", "", "NS", ""],
+];
+
+for (const [message, leader, status, note] of vipCases) {
+  test(`reads ${JSON.stringify(message)} as a VIP led by ${JSON.stringify(leader)}`, () => {
+    const parsed = parseReportMessage(message);
+
+    assert.equal(parsed.kind, "report");
+    assert.equal(parsed.vip, true);
+    assert.equal(parsed.autoSlot, true);
+    assert.equal(parsed.leader, leader);
+    assert.equal(parsed.status, status);
+    assert.equal(parsed.note, note);
+  });
+}
+
+test("VIP 2 still pins the second VIP slot and keeps the leader", () => {
+  const parsed = parseReportMessage("vip 2 sarah apon");
+
+  assert.equal(parsed.label, "VIP (tour 2)");
+  assert.equal(parsed.autoSlot, false);
+  assert.equal(parsed.leader, "sarah");
+  assert.equal(parsed.status, "APON");
+});
+
+test("non-VIP tours never grow a leader", () => {
+  const parsed = parseReportMessage("penguin 245 sarah was great");
+
+  assert.equal(parsed.vip, undefined);
+  assert.equal(parsed.leader, undefined);
+  assert.equal(parsed.note, "sarah was great");
+});
+
+test("extractLeader leaves a status-only remainder alone", () => {
+  assert.deepEqual(extractLeader("no show"), { leader: "", rest: "no show" });
+  assert.deepEqual(extractLeader("(Ana) apon"), { leader: "Ana", rest: "apon" });
+});
+
+test("pickVipSlot fills open VIP slots in order and keeps a leader on their slot", () => {
+  const vips = DEFAULT_TOURS.filter(isVipTour);
+  assert.equal(vips.length, 2);
+  const [first, second] = vips;
+
+  assert.equal(pickVipSlot(vips, [], "Sarah").id, first.id);
+
+  const sarahOnFirst = [{ slotId: first.id, slot: first.legacyIndex, leader: "Sarah" }];
+  assert.equal(pickVipSlot(vips, sarahOnFirst, "Marcus").id, second.id);
+  assert.equal(pickVipSlot(vips, sarahOnFirst, "sarah").id, first.id, "a follow-up from the same leader stays on their tour");
+
+  const bothTaken = [...sarahOnFirst, { slotId: second.id, slot: second.legacyIndex, leader: "Marcus" }];
+  assert.equal(pickVipSlot(vips, bothTaken, "Marcus").id, second.id);
+  assert.equal(pickVipSlot(vips, bothTaken, "Dana").id, second.id);
+});
+
+test("help mentions how to report a VIP leader", () => {
+  assert.match(commandHelp(), /vip sarah/i);
 });

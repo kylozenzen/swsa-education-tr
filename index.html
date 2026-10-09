@@ -53,6 +53,11 @@
       <select id="slot"></select>
     </div>
 
+    <div class="field" id="leaderwrap" hidden>
+      <label>Who led it?</label>
+      <input type="text" id="leader" placeholder="Sarah" autocomplete="off">
+    </div>
+
     <div class="field">
       <label>How did it go?</label>
       <div class="chips" id="chips">
@@ -98,9 +103,16 @@ fetch("/.netlify/functions/tours", { cache: "no-store" }).then(r => r.json()).th
     sel.appendChild(o);
   });
   $("#send").disabled = !tours.length;
+  syncLeader();
 }).catch(() => { $("#send").disabled = true; $("#send").textContent = "Form unavailable — try again"; });
 
 $("#who").value = localStorage.getItem("guide-name") || "";
+
+// VIP tours have no set time, so the form asks who led it.
+const isVip = t => String(t?.name || "").trim().toUpperCase() === "VIP";
+const selectedTour = () => tours.find(t => t.id === sel.value);
+function syncLeader(){ $("#leaderwrap").hidden = !isVip(selectedTour()); }
+sel.onchange = syncLeader;
 
 document.querySelectorAll(".chip").forEach(c => c.onclick = () => {
   document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
@@ -113,6 +125,9 @@ $("#send").onclick = async () => {
   const btn = $("#send");
   const note = $("#note").value.trim();
   const who = $("#who").value.trim();
+  const vip = isVip(selectedTour());
+  const leader = vip ? $("#leader").value.trim() : "";
+  if(vip && !leader){ $("#leader").focus(); return; }
   if(status !== "APON" && !note){ $("#note").focus(); return; }
 
   btn.disabled = true; btn.textContent = "Sending…";
@@ -120,11 +135,11 @@ $("#send").onclick = async () => {
     const res = await fetch("/api/day", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slotId: sel.value, status, note, who })
+      body: JSON.stringify({ slotId: sel.value, status, note, who, leader })
     });
     if(!res.ok) throw new Error();
     localStorage.setItem("guide-name", who);
-    $("#echo").textContent = `${tours.find(t => t.id === sel.value)?.label || "Tour"} — ${status === "APON" ? "all normal" : status}`;
+    $("#echo").textContent = `${selectedTour()?.label || "Tour"}${leader ? ` (led by ${leader})` : ""} — ${status === "APON" ? "all normal" : status}`;
     $("#form").hidden = true;
     $("#done").hidden = false;
   }catch{
@@ -135,6 +150,7 @@ $("#send").onclick = async () => {
 
 $("#again").onclick = () => {
   $("#note").value = "";
+  $("#leader").value = "";
   status = "APON";
   document.querySelectorAll(".chip").forEach((x, i) => x.classList.toggle("on", i === 0));
   $("#notewrap").hidden = true;

@@ -179,7 +179,7 @@ function prettyMonth(m) {
 // Older archives stored only exceptions; newer ones store every report.
 function reportsFor(day) { return day.reports || day.exceptions || []; }
 function originOf(r) { return ORIGIN_LABEL[r.source] || String(r.source || "").trim(); }
-function creditLine(r) { return [originOf(r), String(r.who || "").trim()].filter(Boolean).join(" \u00b7 "); }
+function creditLine(r) { const led = String(r.leader || "").trim(); return [originOf(r), String(r.who || "").trim(), led ? `led by ${led}` : ""].filter(Boolean).join(" \u00b7 "); }
 function stampTime(iso) {
   const d = iso ? new Date(iso) : null;
   return d && !isNaN(d) ? d.toLocaleString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
@@ -375,18 +375,18 @@ function download(name, text, type) {
 
 // CSV always includes everything, whichever view is on screen.
 function toCsv(record) {
-  const rows = [["date", "weekday", "tour", "status", "flagged", "note", "reported_by", "origin", "recorded_at", "submitted"]];
+  const rows = [["date", "weekday", "tour", "status", "flagged", "note", "reported_by", "led_by", "origin", "recorded_at", "submitted"]];
   for (const date of Object.keys(record.days).sort()) {
     const day = record.days[date];
     const wd = weekday(date);
     for (const r of reportsFor(day)) {
-      rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, originOf(r), r.at || "", "yes"]);
+      rows.push([date, wd, r.tour, r.status, isFlagged(r) ? "yes" : "no", r.note, r.who, r.leader || "", originOf(r), r.at || "", "yes"]);
     }
     for (const o of day.overrides || []) {
-      rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, o.who || "", "Supervisor correction", o.at || "", "no"]);
+      rows.push([date, wd, o.tour, "supervisor correction", "no", o.text, o.who || "", "", "Supervisor correction", o.at || "", "no"]);
     }
     for (const t of day.unreported || []) {
-      rows.push([date, wd, t, "APON (assumed)", "no", "", "", "", "", "no"]);
+      rows.push([date, wd, t, "APON (assumed)", "no", "", "", "", "", "", "no"]);
     }
   }
   return rows.map((r) => r.map((c) => `"${String(c == null ? "" : c).replace(/"/g, '""')}"`).join(",")).join("\r\n");

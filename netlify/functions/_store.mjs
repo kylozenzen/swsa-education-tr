@@ -132,6 +132,8 @@ export async function addSubmission(input) {
     status: cleanText(input.status, 20).toUpperCase(),
     note: cleanText(input.note, 1200),
     who: cleanText(input.who, 120),
+    // VIP tours: the guide who led it (may differ from who reported it).
+    leader: cleanText(input.leader, 60),
     source: cleanText(input.source, 40) || "web",
     sourceId,
     senderId: cleanText(input.senderId, 120),
