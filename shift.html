@@ -55,7 +55,11 @@ button{padding:10px 14px;border:1px solid var(--navy);border-radius:6px;backgrou
 
 /* Summary chips */
 .summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.chip{display:flex;align-items:baseline;gap:6px;padding:8px 12px;border-radius:8px;background:#fff;border:1px solid var(--rule);font-size:13px}
+.chip{display:flex;align-items:baseline;gap:6px;padding:8px 12px;border-radius:8px;background:#fff;border:1px solid var(--rule);font:13px system-ui;cursor:pointer;color:inherit}
+button.chip:hover{filter:brightness(.97)}
+.chip[aria-pressed=true]{box-shadow:0 0 0 2px currentColor inset}
+.chip.q{cursor:default}
+.chip.zero{opacity:.55}
 .chip b{font-size:18px}
 .chip.issue{background:var(--coralSoft);border-color:#f2c3b7;color:var(--coral)}
 .chip.ns{background:var(--amberSoft);border-color:#efd59c;color:var(--amber)}
@@ -66,9 +70,13 @@ button{padding:10px 14px;border:1px solid var(--navy);border-radius:6px;backgrou
 /* Two-pane workspace */
 .workspace{display:grid;grid-template-columns:minmax(360px,.9fr) minmax(460px,1.1fr);gap:18px;align-items:start}
 .paneHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;flex-wrap:wrap}
-.viewSwitch{display:inline-grid;grid-template-columns:1fr 1fr;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
-.viewSwitch button{border:0;border-radius:0;background:#fff;color:var(--slate);padding:5px 9px;font-size:11px}
-.viewSwitch button.active{background:var(--oceanSoft);color:var(--ocean)}
+.issuesOnly{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:#fff;color:var(--slate);border-radius:999px;padding:4px 10px 4px 5px;font-size:11px;font-weight:700}
+.issuesOnly .sw{width:26px;height:16px;border-radius:999px;background:var(--rule);position:relative;transition:background .2s}
+.issuesOnly .sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .2s}
+.issuesOnly[aria-pressed=true]{border-color:#f2c3b7;color:var(--coral);background:var(--coralSoft)}
+.issuesOnly[aria-pressed=true] .sw{background:var(--coral)}.issuesOnly[aria-pressed=true] .sw::after{left:12px}
+.filterNote{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--slate);background:#fff;border:1px dashed var(--rule);border-radius:8px;padding:7px 10px;margin-bottom:10px}
+.addHint{font-size:12px;color:var(--slate);margin-top:6px}.addHint button{padding:0;border:0;background:none;color:var(--ocean);font-weight:700;text-decoration:underline;cursor:pointer;font-size:12px}
 .count{font-size:11px;color:var(--slate)}
 @media(min-width:861px){
   #reportsPane{position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
@@ -222,9 +230,9 @@ button{padding:10px 14px;border:1px solid var(--navy);border-radius:6px;backgrou
 <div class="tabs" role="tablist"><button class="tab active" data-tab="reports">Reports</button><button class="tab" data-tab="questions">Questions</button></div>
 <main class="workspace">
   <section class="pane" id="reportsPane">
-    <div class="paneHead"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2>Tour reports</h2><div class="viewSwitch" aria-label="Tour report view"><button class="active" data-view="submitted">Submitted (<span id="submittedCount">0</span>)</button><button data-view="all">All tours (<span id="allCount">0</span>)</button></div></div><span class="count" id="reportCount"></span></div>
+    <div class="paneHead"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2>Tour reports</h2><button class="issuesOnly" id="issuesOnly" aria-pressed="false" title="Hide tours that ran normally"><span class="sw"></span>Issues only</button></div><span class="count" id="reportCount"></span></div>
     <div class="context" id="context" hidden></div>
-    <div class="scroller"><div class="reports" id="reports"></div><p class="muted" style="margin-top:12px">APON: all present / operational normal · NS: no show · DNS: did not sell</p></div>
+    <div class="scroller"><div id="filterNote"></div><div class="reports" id="reports"></div><p class="muted" style="margin-top:12px">APON: all present / operational normal · NS: no show · DNS: did not sell</p><p class="addHint">Tour ran but nobody reported it? <button id="openAdd">Add a report</button> under Manage tours.</p></div>
   </section>
   <section class="pane" id="questionsPane" hidden>
     <div class="paneHead"><h2>Shift questions</h2><span class="count" id="qCount"></span></div>
@@ -253,7 +261,7 @@ const CTX={
 };
 
 const $=s=>document.querySelector(s),today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"}),esc=s=>String(s||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let tours=[],pw="",reportView="submitted",activeQ=null,state={date:today(),narrative:{},overrides:{},submissions:[]};
+let tours=[],pw="",filter=null,activeQ=null,state={date:today(),narrative:{},overrides:{},submissions:[]};
 const label=t=>t?.label||`${t?.name||"Tour"}${t?.time?" "+t.time:""}`.trim(),legacy=i=>i===null||i===undefined||i===""?null:tours.find(t=>Number(t.legacyIndex)===Number(i)),tourFor=s=>tours.find(t=>t.id===s.slotId)||legacy(s.slot),tourByKey=k=>tours.find(t=>t.id===k)||legacy(k);
 // An APON report that carried a note keeps the note on its line — the archive counts that note as flagged, so the shift page must not drop it. It is still not an issue.
 const line=s=>s.status==="APON"?(s.note?`APON — ${s.note}`:"APON"):s.status==="ISSUE"?(s.note||"See note"):`${s.note?s.note+" ":""}${s.status}`.trim(),apon=v=>/^APON\b/i.test(String(v||"").trim());
@@ -351,33 +359,37 @@ async function saveOverride(g,row){const text=row.querySelector("input").value.t
 function dayEditor(t,s){const current=s?.status||"APON",d=document.createElement("div");d.className=`dayEdit${isVip(t)?" vip":""}`;d.innerHTML=`<select aria-label="Status for ${esc(label(t))}">${["APON","NS","DNS","ISSUE"].map(x=>`<option${x===current?" selected":""}>${x}</option>`).join("")}</select>${isVip(t)?`<input data-leader aria-label="Who led ${esc(label(t))}" placeholder="Who led it?" value="${esc(led(s))}">`:""}<input data-note aria-label="Note for ${esc(label(t))}" placeholder="Supervisor note" value="${esc(s?.note||"")}"><button class="ghost small">${s?"Add supervisor entry":"Add report"}</button>`;d.querySelector("button").onclick=()=>saveDayEntry(t,d);return d}
 async function saveDayEntry(t,row){const status=row.querySelector("select").value,note=row.querySelector("[data-note]").value.trim(),leader=(row.querySelector("[data-leader]")?.value||"").trim(),button=row.querySelector("button");if(!pw){$("#admin").classList.add("open");button.textContent="Unlock supervisor admin first";return}if(status==="ISSUE"&&!note){button.textContent="Add an issue note";return}button.textContent="saving…";try{const r=await fetch("/api/day",{method:"POST",headers:{"content-type":"application/json","x-admin-password":pw},body:JSON.stringify({date:state.date,slotId:t.id,status,note,leader,who:supName()||"Supervisor entry"})}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Could not save");await pull()}catch(e){button.textContent=e.message}}
 
-let normalOpen=true;
 function section(box,cls,title,list,opts){if(!list.length)return;const h=document.createElement("div");h.className="groupHead "+cls;h.innerHTML=`<span>${title}</span><span class="n">${list.length}</span>`;box.appendChild(h);list.forEach(g=>box.appendChild(groupCard(g,opts)))}
+// filter: null shows everything (issues still sort to the top), "attn" hides
+// normal tours, or one status code shows only that status.
+const FILTER_NAME={attn:"tours that need attention",ISSUE:"something happened",NS:"no shows",DNS:"did not sell",APON:"APON tours"};
+function setFilter(f){filter=filter===f?null:f;renderReports()}
 function renderReports(){
   // Keep an open correction box open across the live refresh.
   const editing=[...document.querySelectorAll(".report.editing")].map(r=>r.dataset.key);
-  const box=$("#reports"),active=tours.filter(t=>t.active!==false&&t.reportable!==false),gs=reportGroups();box.innerHTML="";
-  $("#submittedCount").textContent=state.submissions.length;$("#allCount").textContent=active.length;
+  const box=$("#reports"),gs=reportGroups();box.innerHTML="";
   const attn=sorted(gs.filter(flagged)),normal=gs.filter(g=>statusOf(g)==="APON");
-  $("#reportCount").textContent=reportView==="submitted"?`${state.submissions.length} submitted · ${gs.length} tour${gs.length===1?"":"s"}`:`${active.length} catalog tours`;
+  $("#reportCount").textContent=`${state.submissions.length} submitted · ${gs.length} tour${gs.length===1?"":"s"}`;
+  $("#issuesOnly").setAttribute("aria-pressed",String(filter==="attn"));
   renderSummary(gs);
-  if(reportView==="submitted"){
-    if(!gs.length){box.innerHTML='<div class="empty"><strong>No reports submitted for this date.</strong><br><span class="muted">Only actual GroupMe, online form, and supervisor submissions appear here.</span></div>'}
-    else{if(!attn.length){const h=document.createElement("div");h.className="groupHead normal";h.innerHTML="<span>Nothing flagged — every report is APON</span>";box.appendChild(h)}
-      section(box,"attn","Needs attention",attn);section(box,"normal","All normal",normal)}
+  $("#filterNote").innerHTML=filter?`<div class="filterNote"><span>Showing only <strong>${FILTER_NAME[filter]}</strong></span><button class="ghost tiny" data-clear>Show all</button></div>`:"";
+  $("#filterNote").querySelector("[data-clear]")?.addEventListener("click",()=>setFilter(filter));
+  if(!gs.length){box.innerHTML='<div class="empty"><strong>No reports submitted for this date.</strong><br><span class="muted">Only actual GroupMe, online form, and supervisor submissions appear here.</span></div>'}
+  else if(filter==="attn"||filter===null){
+    if(!attn.length){const h=document.createElement("div");h.className="groupHead normal";h.innerHTML="<span>Nothing flagged — every report is APON</span>";box.appendChild(h)}
+    section(box,"attn","Needs attention",attn);if(filter===null)section(box,"normal","All normal",normal);
   }else{
-    const byTour=t=>gs.find(x=>x.tour?.id===t.id)||{key:t.id,tour:t,name:label(t),entries:[]};
-    const all=active.map(byTour),extra=gs.filter(g=>!g.tour||!active.some(t=>t.id===g.tour.id));
-    const list=[...all,...extra];
-    section(box,"attn","Needs attention",sorted(list.filter(flagged)),{withDayEditor:true});
-    section(box,"normal","All normal",list.filter(g=>statusOf(g)==="APON"),{withDayEditor:true});
-    section(box,"none","No report yet",list.filter(g=>!statusOf(g)),{withDayEditor:true});
+    const list=sorted(gs.filter(g=>statusOf(g)===filter));
+    if(list.length)section(box,filter==="APON"?"normal":"attn",FILTER_NAME[filter],list);
+    else box.innerHTML=`<div class="empty">No ${FILTER_NAME[filter]} on this date.</div>`;
   }
   editing.forEach(k=>box.querySelector(`.report[data-key="${CSS.escape(k)}"]`)?.classList.add("editing"));
   showContext(activeQ,false);
 }
 function renderSummary(gs){const c={ISSUE:0,NS:0,DNS:0,APON:0};gs.forEach(g=>{const s=statusOf(g);if(s)c[s]++});const answered=N.filter((_,i)=>String(state.narrative[i]||"").trim()).length;
-  $("#summary").innerHTML=`<span class="chip issue"><b>${c.ISSUE}</b>something happened</span><span class="chip ns"><b>${c.NS}</b>no show</span><span class="chip dns"><b>${c.DNS}</b>did not sell</span><span class="chip ok"><b>${c.APON}</b>APON</span><span class="chip q"><b>${answered}/${N.length}</b>questions answered</span>`}
+  const chip=(f,cls,txt)=>`<button class="chip ${cls}${c[f]?"":" zero"}" data-filter="${f}" aria-pressed="${filter===f}" title="Show only ${FILTER_NAME[f]}"><b>${c[f]}</b>${txt}</button>`;
+  $("#summary").innerHTML=chip("ISSUE","issue","something happened")+chip("NS","ns","no show")+chip("DNS","dns","did not sell")+chip("APON","ok","APON")+`<span class="chip q"><b>${answered}/${N.length}</b>questions answered</span>`;
+  $("#summary").querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{setFilter(b.dataset.filter);if(!matchMedia("(min-width:861px)").matches)setTab("reports")})}
 
 /* ---------- Linking questions to reports ---------- */
 function relatedFor(i){const c=CTX[i];if(!c)return [];return sorted(reportGroups().filter(g=>(c.flagged&&flagged(g))||(c.noted&&hasNote(g))||(c.status&&c.status.includes(statusOf(g)))||(c.kw&&c.kw.test(groupText(g)))))}
@@ -434,6 +446,6 @@ async function changeDate(v){
   // Finish saving the old day before switching, so its answers land on the right date.
   await flush();if(Object.keys(pending).length){$("#date").value=state.date;setSave("bad");return}
   state.date=v;state.narrative={};activeQ=null;document.querySelectorAll("[data-n]").forEach(e=>e.value="");await pull()}
-async function start(){buildN();$("#supName").value=localStorage.getItem("sup-name")||"";$("#supName").oninput=()=>localStorage.setItem("sup-name",$("#supName").value);$("#date").value=state.date;$("#date").onchange=e=>changeDate(e.target.value);$("#print").onclick=async()=>{await flush();sheet();print()};$("#refresh").onclick=pull;$("#manage").onclick=()=>$("#admin").classList.toggle("open");$("#closeAdmin").onclick=closeAdmin;$("#unlock").onclick=unlock;$("#pw").onkeydown=e=>{if(e.key==="Enter")unlock()};$("#addTour").onclick=addTour;$("#addReport").onclick=addManualReport;document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{reportView=b.dataset.view;document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));renderReports()});await loadTours();await pull()}
+async function start(){buildN();$("#supName").value=localStorage.getItem("sup-name")||"";$("#supName").oninput=()=>localStorage.setItem("sup-name",$("#supName").value);$("#date").value=state.date;$("#date").onchange=e=>changeDate(e.target.value);$("#print").onclick=async()=>{await flush();sheet();print()};$("#refresh").onclick=pull;$("#manage").onclick=()=>$("#admin").classList.toggle("open");$("#closeAdmin").onclick=closeAdmin;$("#unlock").onclick=unlock;$("#pw").onkeydown=e=>{if(e.key==="Enter")unlock()};$("#addTour").onclick=addTour;$("#addReport").onclick=addManualReport;document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));$("#issuesOnly").onclick=()=>setFilter("attn");$("#openAdd").onclick=()=>{$("#admin").classList.add("open");$("#admin").scrollIntoView({behavior:"smooth"});($("#panel").hidden?$("#pw"):$("#manualTour")).focus()};await loadTours();await pull()}
 start();setInterval(pull,60000);
 </script></body></html>
