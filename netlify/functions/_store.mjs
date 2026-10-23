@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 import { DEFAULT_TOURS, normalizeOverride, normalizeOverrides } from "./_slots.mjs";
+import { mergeNarrative } from "./_narrative.mjs";
 
 const STORE_NAME = "tour-report-data";
 const TOUR_CONFIG_KEY = "config/tours";
@@ -176,15 +177,18 @@ export async function getDay(date) {
 
 export async function saveDay(date, input) {
   const dayDate = validDate(date) ? date : chicagoToday();
-  const requestedOverrides = input && typeof input.overrides === "object"
-    ? input.overrides
-    : (input && typeof input.slots === "object" ? input.slots : {});
-
   const db = store();
   const stored = (await db.get(`days/${dayDate}`, { type: "json" })) || {};
   const previous = stored.schemaVersion === 2
     ? normalizeOverrides(stored.overrides || stored.slots)
     : {};
+
+  // A save that carries no corrections (the shift questions autosave) keeps the
+  // corrections already on record instead of wiping them.
+  const hasOverrides = input && (typeof input.overrides === "object" || typeof input.slots === "object");
+  const requestedOverrides = !hasOverrides
+    ? previous
+    : (typeof input.overrides === "object" ? input.overrides : input.slots);
 
   const who = cleanText(input?.who, 120);
   const at = new Date().toISOString();
@@ -205,7 +209,7 @@ export async function saveDay(date, input) {
     schemaVersion: 2,
     date: dayDate,
     overrides,
-    narrative: input && typeof input.narrative === "object" ? input.narrative : {},
+    narrative: mergeNarrative(stored.narrative, input),
     updatedAt: at,
   };
 
