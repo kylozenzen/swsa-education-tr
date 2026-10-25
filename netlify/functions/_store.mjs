@@ -172,7 +172,64 @@ export async function getDay(date) {
     slots: overrides,
     narrative: day.narrative || {},
     submissions,
+    removed: Array.isArray(day.removed) ? day.removed : [],
   };
+}
+
+// Find a submission's storage key on a date by its id.
+async function findSubmission(db, date, id) {
+  const { blobs } = await db.list({ prefix: `submissions/${date}/` });
+  for (const blob of blobs) {
+    const record = await db.get(blob.key, { type: "json" }).catch(() => null);
+    if (record && record.id === id) return { key: blob.key, record };
+  }
+  return null;
+}
+
+// Change only the removed list on a day record, keeping answers and corrections.
+async function updateRemoved(db, date, change) {
+  const key = `days/${date}`;
+  const stored = (await db.get(key, { type: "json" })) || { schemaVersion: 2, date, overrides: {}, narrative: {} };
+  stored.removed = change(Array.isArray(stored.removed) ? stored.removed : []).slice(-50);
+  await db.setJSON(key, stored);
+}
+
+// A removed report is kept on its day (not in the report list or the archive)
+// so a supervisor can restore it if it was removed by mistake.
+export async function removeSubmission(date, id, who) {
+  const db = store();
+  const found = await findSubmission(db, date, id);
+  if (!found) return null;
+  const removed = { ...found.record, storageKey: found.key, removedBy: cleanText(who, 120) || null, removedAt: new Date().toISOString() };
+  await updateRemoved(db, date, (list) => [...list.filter((r) => r.id !== id), removed]);
+  await db.delete(found.key);
+  return removed;
+}
+
+export async function restoreSubmission(date, id) {
+  const db = store();
+  const stored = (await db.get(`days/${date}`, { type: "json" })) || {};
+  const entry = (stored.removed || []).find((r) => r.id === id);
+  if (!entry) return null;
+  const { storageKey, removedBy, removedAt, ...record } = entry;
+  const key = storageKey && storageKey.startsWith(`submissions/${date}/`) ? storageKey : `submissions/${date}/${Date.now()}-${record.id}`;
+  await db.setJSON(key, record);
+  await updateRemoved(db, date, (list) => list.filter((r) => r.id !== id));
+  return record;
+}
+
+// Move a report filed on the wrong day. It keeps its original time and who sent
+// it, and notes where it came from.
+export async function moveSubmission(date, id, toDate, who) {
+  if (!validDate(toDate) || toDate === date) return null;
+  const db = store();
+  const found = await findSubmission(db, date, id);
+  if (!found) return null;
+  const suffix = found.key.slice(`submissions/${date}/`.length);
+  const moved = { ...found.record, date: toDate, movedFrom: date, movedBy: cleanText(who, 120) || null, movedAt: new Date().toISOString() };
+  await db.setJSON(`submissions/${toDate}/${suffix}`, moved);
+  await db.delete(found.key);
+  return moved;
 }
 
 export async function saveDay(date, input) {
@@ -210,6 +267,7 @@ export async function saveDay(date, input) {
     date: dayDate,
     overrides,
     narrative: mergeNarrative(stored.narrative, input),
+    removed: Array.isArray(stored.removed) ? stored.removed : [],
     updatedAt: at,
   };
 
