@@ -85,17 +85,25 @@ button.chip:hover{filter:brightness(.97)}
   #questionsPane[hidden]{display:block}
 }
 
-/* Context panel: what the active question is about */
-.context{border:1px solid #bcdcea;background:var(--oceanSoft);border-radius:8px;padding:10px 12px;margin-bottom:12px}
-.context[hidden]{display:none!important}
-.contextHead{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.contextHead strong{font-size:13px;color:var(--ocean)}
-.contextList{margin:7px 0 0;padding:0;list-style:none;display:grid;gap:5px}
-.contextList li{background:#fff;border-radius:6px;padding:6px 9px;font-size:13px;border-left:3px solid var(--ocean)}
-.contextList li.issue{border-left-color:var(--coral)}
-.contextList .t{font-weight:700}
-.contextEmpty{font-size:12px;color:var(--slate);margin-top:4px}
-
+/* Related reports, shown under the question being answered */
+.inlineContext{display:none;margin:8px 0 0}
+.question.active .inlineContext{display:block}
+.ctxHead{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:5px}
+.ctxHead strong{font:700 10px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ocean)}
+.ctxList{margin:0;padding:0;list-style:none;display:grid;gap:5px;max-height:260px;overflow:auto}
+.ctxItem{background:#fff;border:1px solid #d4e6ee;border-left:3px solid var(--teal);border-radius:6px;padding:6px 8px;font-size:13px;line-height:1.4}
+.ctxItem.s-ISSUE{border-left-color:var(--coral)}.ctxItem.s-NS{border-left-color:var(--amber)}.ctxItem.s-DNS{border-left-color:var(--plum)}
+.ctxTop{display:flex;align-items:center;gap:6px}
+.ctxTop .t{font-weight:700;white-space:nowrap}
+.ctxTop .w{color:var(--slate);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctxTop .badge{font-size:10px;padding:1px 6px}
+.ctxNote{margin-top:2px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.ctxItem.open .ctxNote{display:block;-webkit-line-clamp:unset}
+.ctxBtns{display:flex;gap:5px;margin-top:4px}
+.ctxBtns button{padding:2px 7px;font-size:11px;font-weight:600;border-radius:4px;background:#fff;color:var(--ocean);border:1px solid #bcdcea}
+.ctxEmpty{font-size:12px;color:var(--slate)}
+.report.flash{animation:flash 1.4s ease}
+@keyframes flash{0%,60%{box-shadow:0 0 0 4px rgba(14,110,140,.35)}100%{box-shadow:none}}
 /* Report groups */
 .groupHead{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font:700 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
 .groupHead:first-child{margin-top:0}
@@ -112,7 +120,7 @@ button.chip:hover{filter:brightness(.97)}
 .report.s-NS{border-left-color:var(--amber);background:#fffdf7}
 .report.s-DNS{border-left-color:var(--plum);background:#fdfbff}
 .report.unreported{border-left-color:var(--rule)}
-.report.related{outline-color:var(--ocean);box-shadow:0 0 0 4px rgba(14,110,140,.12)}
+.report.related{outline-color:#9fcde0}
 .report.compact{padding:8px 12px}
 .reportTop{display:flex;gap:10px;justify-content:space-between;align-items:center}
 .tourName{font-weight:750}
@@ -140,6 +148,18 @@ button.chip:hover{filter:brightness(.97)}
 .tools{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);gap:8px}
 .report.editing .tools{display:grid}
 .lineEdit{display:grid;grid-template-columns:1fr auto;gap:7px}
+.toolLabel{font:700 10px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
+.entryAct{display:grid;grid-template-columns:1fr 150px auto auto;gap:7px;align-items:center;font-size:12px}
+.entryAct input,.entryAct button{padding:6px 7px;font-size:12px}
+.entryAct .what{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entryAct .danger.armed{background:var(--coral);color:#fff}
+.actMsg{font:700 11px ui-monospace,monospace;color:var(--coral);grid-column:1/-1}
+.actMsg:empty{display:none}
+.removedBar{border:1px dashed #f2c3b7;background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--slate)}
+.removedBar summary{cursor:pointer;font-weight:700;color:var(--coral)}
+.removedBar ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:5px}
+.removedBar li{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.movedNote{font:10px ui-monospace,monospace;color:var(--ocean);margin-top:3px}
 .dayEdit{display:grid;grid-template-columns:100px 1fr auto;gap:7px}
 .dayEdit.vip{grid-template-columns:100px 130px 1fr auto}
 .lineEdit input,.lineEdit button,.dayEdit select,.dayEdit input,.dayEdit button{padding:7px;font-size:12px}
@@ -153,8 +173,8 @@ button.chip:hover{filter:brightness(.97)}
 .question label{font:700 14px/1.35 system-ui,"Segoe UI",sans-serif;letter-spacing:0;text-transform:none;color:var(--ink);margin-bottom:7px;display:flex;gap:9px;align-items:flex-start}
 .questionNo{flex:none;font:700 10px ui-monospace,monospace;color:#fff;background:var(--gray);border-radius:999px;width:22px;height:22px;display:grid;place-items:center;margin-top:-1px}
 .question.answered .questionNo{background:var(--teal)}
-.qHint{font:11px ui-monospace,monospace;color:var(--ocean);margin-left:auto;white-space:nowrap;font-weight:600}
-.inlineContext{display:none}
+.qHint{font:11px ui-monospace,monospace;color:var(--ocean);margin-left:auto;white-space:nowrap;font-weight:600;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline dotted}
+.qHint:empty{display:none}
 
 /* Admin */
 .ok,.status{color:var(--teal);font:700 12px ui-monospace,monospace}
@@ -182,11 +202,10 @@ button.chip:hover{filter:brightness(.97)}
   .tabs{display:grid;grid-template-columns:1fr 1fr;margin-bottom:12px;border:1px solid var(--navy);border-radius:6px;overflow:hidden}
   .tab{border:0;border-radius:0;background:#fff;color:var(--ink)}.tab.active{background:var(--navy);color:#fff}
   .pane[hidden]{display:none}
-  #reportsPane .context{display:none!important}
-  .question.active .inlineContext{display:block;margin-top:8px}
   .card{padding:12px}.question{padding:10px 8px}
-  .question label{flex-wrap:wrap}.qHint{margin-left:31px;width:100%}
+  .question label{flex-wrap:wrap}.qHint{margin-left:31px;width:100%;text-align:left}
   .adminGrid,.editFields{grid-template-columns:1fr}.aliases{grid-column:auto}
+  .entryAct{grid-template-columns:1fr 1fr}.entryAct .what{grid-column:1/-1}
   .dayEdit,.dayEdit.vip{grid-template-columns:1fr 1fr}.dayEdit input,.dayEdit button{grid-column:1/-1}
 }
 @media print{
@@ -231,8 +250,7 @@ button.chip:hover{filter:brightness(.97)}
 <main class="workspace">
   <section class="pane" id="reportsPane">
     <div class="paneHead"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2>Tour reports</h2><button class="issuesOnly" id="issuesOnly" aria-pressed="false" title="Hide tours that ran normally"><span class="sw"></span>Issues only</button></div><span class="count" id="reportCount"></span></div>
-    <div class="context" id="context" hidden></div>
-    <div class="scroller"><div id="filterNote"></div><div class="reports" id="reports"></div><p class="muted" style="margin-top:12px">APON: all present / operational normal · NS: no show · DNS: did not sell</p><p class="addHint">Tour ran but nobody reported it? <button id="openAdd">Add a report</button> under Manage tours.</p></div>
+    <div class="scroller"><div id="removedBar"></div><div id="filterNote"></div><div class="reports" id="reports"></div><p class="muted" style="margin-top:12px">APON: all present / operational normal · NS: no show · DNS: did not sell</p><p class="addHint">Tour ran but nobody reported it? <button id="openAdd">Add a report</button> under Manage tours.</p></div>
   </section>
   <section class="pane" id="questionsPane" hidden>
     <div class="paneHead"><h2>Shift questions</h2><span class="count" id="qCount"></span></div>
@@ -261,7 +279,7 @@ const CTX={
 };
 
 const $=s=>document.querySelector(s),today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"}),esc=s=>String(s||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let tours=[],pw="",filter=null,activeQ=null,state={date:today(),narrative:{},overrides:{},submissions:[]};
+let tours=[],pw="",filter=null,activeQ=null,state={date:today(),narrative:{},overrides:{},submissions:[],removed:[]};
 const label=t=>t?.label||`${t?.name||"Tour"}${t?.time?" "+t.time:""}`.trim(),legacy=i=>i===null||i===undefined||i===""?null:tours.find(t=>Number(t.legacyIndex)===Number(i)),tourFor=s=>tours.find(t=>t.id===s.slotId)||legacy(s.slot),tourByKey=k=>tours.find(t=>t.id===k)||legacy(k);
 // An APON report that carried a note keeps the note on its line — the archive counts that note as flagged, so the shift page must not drop it. It is still not an issue.
 const line=s=>s.status==="APON"?(s.note?`APON — ${s.note}`:"APON"):s.status==="ISSUE"?(s.note||"See note"):`${s.note?s.note+" ":""}${s.status}`.trim(),apon=v=>/^APON\b/i.test(String(v||"").trim());
@@ -306,7 +324,7 @@ addEventListener("beforeunload",e=>{flush({keepalive:true});if(Object.keys(pendi
 async function loadTours(){const r=await fetch(`/.netlify/functions/tours?t=${Date.now()}`,{cache:"no-store"});if(!r.ok)throw Error("Tours unavailable");tours=(await r.json()).tours||[]}
 async function pull(){try{
   const r=await fetch(`/.netlify/functions/day?date=${encodeURIComponent(state.date)}&t=${Date.now()}`,{cache:"no-store"});if(!r.ok)throw Error();
-  const d=await r.json();state.overrides=d.slots||{};state.submissions=d.submissions||[];
+  const d=await r.json();state.overrides=d.slots||{};state.submissions=d.submissions||[];state.removed=d.removed||[];
   const server=d.narrative||{};
   // An unsent draft left on this device (closed tab, lost connection) comes back
   // where the server has nothing newer for that question.
@@ -336,7 +354,7 @@ const groupText=g=>[g.name,leadersOf(g),overrideFor(g)?.text,...g.entries.map(s=
 const hasNote=g=>g.entries.some(s=>String(s.note||"").trim())||!!overrideFor(g);
 function sorted(gs){return [...gs].sort((a,b)=>(RANK[statusOf(a)]??9)-(RANK[statusOf(b)]??9))}
 
-function entryHtml(s,many=true){const who=person(s),t=clock(s.createdAt);return `<div class="entry"><div class="entryTop"><span class="origin${supAdd(s)?" sup":""}">${esc(origin(s))}</span>${many?`<span class="badge ${esc(s.status||"")}">${esc(s.status||"REPORT")}</span>`:""}</div>${led(s)?`<p class="reportNote"><strong>Led by ${esc(led(s))}</strong></p>`:""}${s.note?`<p class="reportNote">${esc(s.note)}</p>`:""}<div class="who">${supAdd(s)?`Added by ${esc(who||"a supervisor")}`:`Submitted${who?" by "+esc(who):""}`}${t?" · "+esc(t):""}</div></div>`}
+function entryHtml(s,many=true){const who=person(s),t=clock(s.createdAt);return `<div class="entry"><div class="entryTop"><span class="origin${supAdd(s)?" sup":""}">${esc(origin(s))}</span>${many?`<span class="badge ${esc(s.status||"")}">${esc(s.status||"REPORT")}</span>`:""}</div>${led(s)?`<p class="reportNote"><strong>Led by ${esc(led(s))}</strong></p>`:""}${s.note?`<p class="reportNote">${esc(s.note)}</p>`:""}${s.movedFrom?`<div class="movedNote">Moved here from ${esc(s.movedFrom)}${s.movedBy?" by "+esc(s.movedBy):""}</div>`:""}<div class="who">${supAdd(s)?`Added by ${esc(who||"a supervisor")}`:`Submitted${who?" by "+esc(who):""}`}${t?" · "+esc(t):""}</div></div>`}
 // APON with one plain report reads as a single line; anything else gets the full card.
 function groupCard(g,{withDayEditor=false}={}){
   const o=overrideFor(g),n=g.entries.length,st=statusOf(g),compact=st==="APON"&&n===1&&!o&&!led(g.entries[0]),r=document.createElement("article");
@@ -344,15 +362,32 @@ function groupCard(g,{withDayEditor=false}={}){
   const badge=o?`<span class="badge fixed">Corrected</span>`:n>1?`<span class="badge ${st}">${n} entries · ${st}</span>`:n?`<span class="badge ${st}">${esc(g.entries[0].status||"REPORT")}</span>`:`<span class="badge none">Not reported</span>`;
   const leaders=leadersOf(g);
   if(compact){const s=g.entries[0],who=person(s),t=clock(s.createdAt);
-    r.innerHTML=`<div class="reportTop"><div class="tourName">${esc(g.name)} <small>${esc([who,t].filter(Boolean).join(" · "))}</small></div><div style="display:flex;gap:6px;align-items:center">${badge}<button class="ghost tiny" data-fix>Correct</button></div></div>${s.note?`<p class="reportNote">${esc(s.note)}</p>`:""}`;
+    r.innerHTML=`<div class="reportTop"><div class="tourName">${esc(g.name)} <small>${esc([who,t].filter(Boolean).join(" · "))}</small></div><div style="display:flex;gap:6px;align-items:center">${badge}<button class="ghost tiny" data-fix>Correct</button></div></div>${s.note?`<p class="reportNote">${esc(s.note)}</p>`:""}${s.movedFrom?`<div class="movedNote">Moved here from ${esc(s.movedFrom)}${s.movedBy?" by "+esc(s.movedBy):""}</div>`:""}`;
   }else{
     r.innerHTML=`<div class="reportTop"><div class="tourName">${esc(g.name||"Tour report")}${leaders?` <small>— ${esc(leaders)}</small>`:""}</div><div style="display:flex;gap:6px;align-items:center">${badge}<button class="ghost tiny" data-fix>${withDayEditor?(n?"Correct / add":"Add report"):"Correct"}</button></div></div>`
     +(o?`<div class="official"><span class="eyebrow">Official line</span><div class="lineText">${esc(o.text)}</div><div class="edited">Edited by ${esc(o.who||"a supervisor")}${o.at?" · "+esc(stamp(o.at)):""}</div></div>`:"")
     +(n?`${o?`<div class="subhead">Original report${n>1?"s":""} — kept on record</div>`:""}<div class="entries">${g.entries.map(s=>entryHtml(s,n>1)).join("")}</div>`:`<div class="who">No report${o?"":" or supervisor entry"} submitted for this date.</div>`);
   }
-  const tools=document.createElement("div");tools.className="tools";tools.appendChild(lineEditor(g));if(withDayEditor&&g.tour)tools.appendChild(dayEditor(g.tour,g.entries.at(-1)));r.appendChild(tools);
+  const tools=document.createElement("div");tools.className="tools";tools.appendChild(lineEditor(g));if(n)tools.appendChild(entryActions(g));if(withDayEditor&&g.tour)tools.appendChild(dayEditor(g.tour,g.entries.at(-1)));r.appendChild(tools);
   r.querySelector("[data-fix]").onclick=()=>{r.classList.toggle("editing");if(r.classList.contains("editing"))r.querySelector(".tools input")?.focus()};
   return r}
+// Fix a report filed on the wrong day (move it) or by mistake (remove it).
+// Removed reports stay on the day so they can be restored.
+function entryActions(g){const d=document.createElement("div");d.style.display="grid";d.style.gap="6px";
+  d.innerHTML=`<span class="toolLabel">Wrong day or added by mistake?</span>`+g.entries.map((s,i)=>`<div class="entryAct" data-i="${i}"><span class="what">${esc(origin(s))}${person(s)?" · "+esc(person(s)):""}${s.createdAt?" · "+esc(clock(s.createdAt)):""} — ${esc(line(s))}</span><input type="date" aria-label="Move to date" value="${esc(state.date)}"><button class="ghost" data-move>Move</button><button class="danger" data-remove>Remove</button><span class="actMsg"></span></div>`).join("");
+  d.querySelectorAll(".entryAct").forEach(row=>{const s=g.entries[Number(row.dataset.i)],msg=row.querySelector(".actMsg");
+    row.querySelector("[data-move]").onclick=async()=>{const to=row.querySelector("input").value;if(to===state.date){msg.textContent="Pick the date it belongs on, then Move.";return}await entryAction({action:"move",id:s.id,to},msg,`Moved to ${to}`)};
+    const rm=row.querySelector("[data-remove]");rm.onclick=async()=>{if(!rm.classList.contains("armed")){rm.classList.add("armed");rm.textContent="Confirm remove";setTimeout(()=>{rm.classList.remove("armed");rm.textContent="Remove"},4000);return}rm.classList.remove("armed");rm.textContent="Remove";await entryAction({action:"remove",id:s.id},msg)}});
+  return d}
+async function entryAction(body,msg,done){if(!pw){$("#admin").classList.add("open");$("#admin").scrollIntoView({behavior:"smooth"});$("#pw").focus();if(msg)msg.textContent="Unlock supervisor admin first (Manage tours).";return}
+  if(msg){msg.style.color="var(--slate)";msg.textContent="working…"}
+  try{const r=await fetch("/api/day",{method:"PATCH",headers:{"content-type":"application/json","x-admin-password":pw},body:JSON.stringify({date:state.date,who:supName(),...body})}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Could not save");if(done)flash(done);await pull()}
+  catch(e){if(msg){msg.style.color="";msg.textContent=e.message}}}
+function flash(text){const el=$("#saved");const prev=el.textContent;el.textContent=text;setTimeout(()=>{if(el.textContent===text)el.textContent=prev},2500)}
+function renderRemoved(){const box=$("#removedBar"),list=state.removed||[];if(!list.length){box.innerHTML="";return}
+  const name=s=>{const t=tourFor(s);return t?label(t):s.slotId||"Unknown tour"};
+  box.innerHTML=`<details class="removedBar"><summary>${list.length} removed report${list.length===1?"":"s"} on this date</summary><ul>${list.map(s=>`<li><span><strong>${esc(name(s))}</strong> — ${esc(line(s))}${person(s)?" · "+esc(person(s)):""}<br><span class="muted">Removed${s.removedBy?" by "+esc(s.removedBy):""}${s.removedAt?" · "+esc(stamp(s.removedAt)):""}</span></span><button class="ghost tiny" data-restore="${esc(s.id)}">Restore</button></li>`).join("")}</ul></details>`;
+  box.querySelectorAll("[data-restore]").forEach(b=>b.onclick=()=>entryAction({action:"restore",id:b.dataset.restore},null,"Report restored"))}
 function lineEditor(g){const o=overrideFor(g),d=document.createElement("div");d.className="lineEdit";d.innerHTML=`<input aria-label="Official line for ${esc(g.name||"this tour")}" placeholder="Correct the line on the report" value="${esc(o?.text||"")}"><button class="ghost small">${o?"Update correction":"Save correction"}</button>`;d.querySelector("button").onclick=()=>saveOverride(g,d);return d}
 // Only the correction changes here; the submitted reports underneath are never touched.
 async function saveOverride(g,row){const text=row.querySelector("input").value.trim(),button=row.querySelector("button");if(!pw){$("#admin").classList.add("open");button.textContent="Unlock supervisor admin first";return}button.textContent="saving…";overrideKeys(g).forEach(k=>delete state.overrides[k]);if(text)state.overrides[g.key]={text,who:supName(),at:new Date().toISOString()};await pushOverrides();await pull()}
@@ -371,7 +406,7 @@ function renderReports(){
   const attn=sorted(gs.filter(flagged)),normal=gs.filter(g=>statusOf(g)==="APON");
   $("#reportCount").textContent=`${state.submissions.length} submitted · ${gs.length} tour${gs.length===1?"":"s"}`;
   $("#issuesOnly").setAttribute("aria-pressed",String(filter==="attn"));
-  renderSummary(gs);
+  renderSummary(gs);renderRemoved();
   $("#filterNote").innerHTML=filter?`<div class="filterNote"><span>Showing only <strong>${FILTER_NAME[filter]}</strong></span><button class="ghost tiny" data-clear>Show all</button></div>`:"";
   $("#filterNote").querySelector("[data-clear]")?.addEventListener("click",()=>setFilter(filter));
   if(!gs.length){box.innerHTML='<div class="empty"><strong>No reports submitted for this date.</strong><br><span class="muted">Only actual GroupMe, online form, and supervisor submissions appear here.</span></div>'}
@@ -384,7 +419,7 @@ function renderReports(){
     else box.innerHTML=`<div class="empty">No ${FILTER_NAME[filter]} on this date.</div>`;
   }
   editing.forEach(k=>box.querySelector(`.report[data-key="${CSS.escape(k)}"]`)?.classList.add("editing"));
-  showContext(activeQ,false);
+  showContext(activeQ);
 }
 function renderSummary(gs){const c={ISSUE:0,NS:0,DNS:0,APON:0};gs.forEach(g=>{const s=statusOf(g);if(s)c[s]++});const answered=N.filter((_,i)=>String(state.narrative[i]||"").trim()).length;
   const chip=(f,cls,txt)=>`<button class="chip ${cls}${c[f]?"":" zero"}" data-filter="${f}" aria-pressed="${filter===f}" title="Show only ${FILTER_NAME[f]}"><b>${c[f]}</b>${txt}</button>`;
@@ -393,25 +428,32 @@ function renderSummary(gs){const c={ISSUE:0,NS:0,DNS:0,APON:0};gs.forEach(g=>{co
 
 /* ---------- Linking questions to reports ---------- */
 function relatedFor(i){const c=CTX[i];if(!c)return [];return sorted(reportGroups().filter(g=>(c.flagged&&flagged(g))||(c.noted&&hasNote(g))||(c.status&&c.status.includes(statusOf(g)))||(c.kw&&c.kw.test(groupText(g)))))}
-function contextHtml(i,list){const c=CTX[i];if(!c)return "";const items=list.slice(0,8).map(g=>{const o=overrideFor(g),notes=o?o.text:g.entries.map(s=>s.note||"").filter(Boolean).join(" · ")||g.entries.map(line).join(" · ");return `<li class="${flagged(g)?"issue":""}" data-jump="${esc(g.key)}"><span class="t">${esc(g.name)}</span> — ${esc(notes)}</li>`}).join("");
-  return `<div class="contextHead"><strong>Q${i+1} · ${esc(c.title)}</strong><span class="count">${list.length} match${list.length===1?"":"es"}</span></div>${list.length?`<ul class="contextList">${items}</ul>${list.length>8?`<div class="contextEmpty">+${list.length-8} more highlighted below</div>`:""}`:`<div class="contextEmpty">No tour reports mention this yet.</div>`}`}
-function showContext(i,scroll=true){
+function ctxNote(g){const o=overrideFor(g);return o?o.text:g.entries.map(s=>s.note||"").filter(Boolean).join(" · ")}
+function contextHtml(i,list){const c=CTX[i];if(!c)return "";
+  const items=list.map(g=>{const st=statusOf(g)||"",note=ctxNote(g),who=[...new Set(g.entries.map(person).filter(Boolean))].join(", ");
+    return `<li class="ctxItem s-${st}" data-key="${esc(g.key)}"><div class="ctxTop"><span class="t">${esc(g.name)}</span><span class="w">${esc(who)}</span><span class="badge ${st}">${esc(st||"—")}</span></div>${note?`<div class="ctxNote" title="Click to expand">${esc(note)}</div>`:""}<div class="ctxBtns"><button data-add>+ Add to answer</button><button data-jump="${esc(g.key)}">Show report</button></div></li>`}).join("");
+  return `<div class="ctxHead"><strong>${esc(c.title)}</strong><span class="count">${list.length} from today's reports</span></div>${list.length?`<ul class="ctxList">${items}</ul>`:`<div class="ctxEmpty">Nothing in today's reports for this one.</div>`}`}
+// The related reports appear under the question being answered. The report list
+// on the left never moves on its own; matching cards just get a light outline.
+function showContext(i){
   document.querySelectorAll(".report.related").forEach(r=>r.classList.remove("related"));
-  const box=$("#context");if(i==null||!CTX[i]){box.hidden=true;return}
-  const list=relatedFor(i);box.innerHTML=contextHtml(i,list);box.hidden=false;
-  const inline=document.querySelector(`.question[data-q="${i}"] .inlineContext`);if(inline)inline.innerHTML=`<div class="context">${contextHtml(i,list)}</div>`;
-  const keys=new Set(list.map(g=>g.key));let first=null;document.querySelectorAll("#reports .report").forEach(r=>{if(keys.has(r.dataset.key)){r.classList.add("related");first=first||r}});
-  if(scroll&&first&&matchMedia("(min-width:861px)").matches){const sc=$("#reportsPane .scroller");sc.scrollTo({top:first.offsetTop-sc.offsetTop-8,behavior:"smooth"})}
-}
+  document.querySelectorAll(".inlineContext").forEach(x=>{if(Number(x.closest(".question").dataset.q)!==i)x.innerHTML=""});
+  if(i==null||!CTX[i])return;
+  const list=relatedFor(i),box=document.querySelector(`.question[data-q="${i}"] .inlineContext`);
+  if(box){const open=[...box.querySelectorAll(".ctxItem.open")].map(x=>x.dataset.key);box.innerHTML=contextHtml(i,list);open.forEach(k=>box.querySelector(`.ctxItem[data-key="${CSS.escape(k)}"]`)?.classList.add("open"))}
+  const keys=new Set(list.map(g=>g.key));document.querySelectorAll("#reports .report").forEach(r=>{if(keys.has(r.dataset.key))r.classList.add("related")})}
 function setActiveQ(i){if(activeQ===i)return;activeQ=i;document.querySelectorAll(".question").forEach(q=>q.classList.toggle("active",Number(q.dataset.q)===i));showContext(i)}
-document.addEventListener("click",e=>{const li=e.target.closest("[data-jump]");if(!li)return;const r=document.querySelector(`#reports .report[data-key="${CSS.escape(li.dataset.jump)}"]`);if(!r)return;if(!matchMedia("(min-width:861px)").matches)setTab("reports");r.scrollIntoView({behavior:"smooth",block:"center"})});
+document.addEventListener("click",e=>{
+  const note=e.target.closest(".ctxNote");if(note){note.closest(".ctxItem").classList.toggle("open");return}
+  const add=e.target.closest("[data-add]");if(add){const q=add.closest(".question"),f=q.querySelector("[data-n]"),g=reportGroups().find(x=>x.key===add.closest(".ctxItem").dataset.key);if(!g)return;
+    const n=ctxNote(g),bit=`${g.name} — ${n||line(g.entries.at(-1)||{status:statusOf(g)})}`;f.value=f.value.trim()?`${f.value.replace(/\s+$/,"")}\n${bit}`:bit;f.dispatchEvent(new Event("input"));f.focus();add.textContent="Added";add.disabled=true;return}
+  const j=e.target.closest("[data-jump]");if(!j)return;const r=document.querySelector(`#reports .report[data-key="${CSS.escape(j.dataset.jump)}"]`);if(!r)return;
+  if(!matchMedia("(min-width:861px)").matches)setTab("reports");r.scrollIntoView({behavior:"smooth",block:"center"});r.classList.remove("flash");void r.offsetWidth;r.classList.add("flash")});
 
 /* ---------- Questions ---------- */
-function buildN(){N.forEach((q,i)=>{const d=document.createElement("div");d.className="question";d.dataset.q=i;const hint=CTX[i]?`<span class="qHint" data-hint="${i}"></span>`:"";d.innerHTML=`<label for="n${i}"><span class="questionNo">${i+1}</span><span>${esc(q)}</span>${hint}</label>${i===0?`<input id="n${i}" data-n="${i}">`:`<textarea id="n${i}" data-n="${i}"></textarea>`}<div class="inlineContext"></div>`;$("#narrative").appendChild(d)});
+function buildN(){N.forEach((q,i)=>{const d=document.createElement("div");d.className="question";d.dataset.q=i;const hint=CTX[i]?`<button type="button" class="qHint" data-hint="${i}"></button>`:"";d.innerHTML=`<label for="n${i}"><span class="questionNo">${i+1}</span><span>${esc(q)}</span>${hint}</label>${i===0?`<input id="n${i}" data-n="${i}">`:`<textarea id="n${i}" data-n="${i}"></textarea>`}<div class="inlineContext"></div>`;$("#narrative").appendChild(d)});
   document.querySelectorAll("[data-n]").forEach(e=>{e.oninput=()=>{state.narrative[e.dataset.n]=e.value;queue(e.dataset.n,e.value);paintProgress()};e.onfocus=()=>setActiveQ(Number(e.dataset.n))});
-  // On a wide screen the question in the upper part of the window drives the report pane.
-  const io=new IntersectionObserver(es=>{if(document.activeElement?.dataset?.n!=null)return;const v=es.filter(x=>x.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top)[0];if(v)setActiveQ(Number(v.target.dataset.q))},{rootMargin:"-30% 0px -55% 0px"});
-  document.querySelectorAll(".question").forEach(q=>io.observe(q))}
+  document.querySelectorAll("[data-hint]").forEach(h=>h.onclick=e=>{e.preventDefault();const i=Number(h.dataset.hint);setActiveQ(i);document.getElementById("n"+i).focus({preventScroll:true})})}
 function paintN(){document.querySelectorAll("[data-n]").forEach(e=>{const k=e.dataset.n;
   // Never repaint the field someone is typing in. Unsent answers are already merged into state.narrative.
   if(document.activeElement===e)return;const v=state.narrative[k]||"";if(e.value!==v)e.value=v});$("#date").value=state.date;paintProgress()}
