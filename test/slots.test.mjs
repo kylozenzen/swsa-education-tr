@@ -33,6 +33,24 @@ test("a time added to an existing tour is recognised in any typed form", () => {
   assert.equal(parseReportMessage("penguin 245", catalog).slotId, "penguin-245");
 });
 
+test("an NS code flags the report even when APON comes first", () => {
+  const parsed = parseReportMessage("penguin 245 apon ns smith 2");
+  assert.equal(parsed.status, "NS");
+  assert.equal(parsed.note, "smith 2");
+});
+
+test("NS, DNS and APON codes after the time set the status and keep the rest as the note", () => {
+  assert.deepEqual(
+    [parseReportMessage("penguin 245 ns smith 2").status, parseReportMessage("penguin 245 ns smith 2").note],
+    ["NS", "smith 2"],
+  );
+  const dns = parseReportMessage("penguin 245 dns did not sell");
+  assert.equal(dns.status, "DNS");
+  assert.equal(parseReportMessage("penguin 245 apon, dns").status, "DNS");
+  assert.equal(parseReportMessage("penguin 245 apon").status, "APON");
+  assert.equal(parseReportMessage("penguin 245").status, "APON");
+});
+
 test("keeps penguin 245 in the normal report flow", () => {
   const parsed = parseReportMessage("penguin 245");
 

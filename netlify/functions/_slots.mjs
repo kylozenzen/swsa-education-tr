@@ -284,8 +284,22 @@ function looseApon(remainder) {
   return { status: "APON", note: noteFrom(residue) };
 }
 
+// An NS or DNS code anywhere in the report flags it, even when APON leads or
+// follows. Whatever is left over (party name, count, notes) is the note.
+const CODE_ANYWHERE = [
+  ["NS", /\bNS\b/i],
+  ["DNS", /\bDNS\b/i],
+];
+
 function matchStatus(remainder) {
   if (!remainder) return { status: "APON", note: "" };
+  const code = CODE_ANYWHERE.find(([, pattern]) => pattern.test(remainder));
+  if (code) {
+    let residue = remainder;
+    for (const marker of APON_MARKERS) residue = residue.replace(marker, " ");
+    residue = residue.replace(code[1], " ");
+    return { status: code[0], note: noteFrom(residue) };
+  }
   const loose = looseApon(remainder);
   if (loose) return loose;
   const groups = [["APON", APON_PATTERNS], ["NS", NS_PATTERNS], ["DNS", DNS_PATTERNS], ["ISSUE", ISSUE_PATTERNS]];
