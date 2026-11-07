@@ -108,6 +108,13 @@ function aliasRegex(alias) {
 function aliasesFor(slot) {
   const aliases = new Set([slot.label, slot.name, ...(Array.isArray(slot.aliases) ? slot.aliases : [])]);
   if (slot.name && slot.time) aliases.add(`${slot.name} ${slot.time}`);
+  // Phones type "4 15" or "415" for "4:15". Times added from the shift page are
+  // matched the same way as the built-in ones.
+  const clock = String(slot.time || "").match(/^(\d{1,2}):(\d{2})\b/);
+  if (slot.name && clock) {
+    aliases.add(`${slot.name} ${clock[1]}${clock[2]}`);
+    aliases.add(`${slot.name} ${clock[1]} ${clock[2]}`);
+  }
   for (const alias of [...aliases]) {
     aliases.add(String(alias).replace(/\s*(?:A\.?M\.?|P\.?M\.?)\b/gi, "").trim());
   }

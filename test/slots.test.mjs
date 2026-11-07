@@ -20,6 +20,19 @@ for (const command of tourFormCommands) {
   });
 }
 
+test("a time added to an existing tour is recognised in any typed form", () => {
+  const catalog = [
+    { id: "penguin-415", name: "PENGUIN", time: "4:15", label: "PENGUIN 4:15", aliases: [], active: true, reportable: true },
+    { id: "penguin-245", name: "PENGUIN", time: "2:45", label: "PENGUIN 2:45", aliases: [], active: true, reportable: true },
+  ];
+  for (const text of ["penguin 4:15", "penguin 415", "penguin 4 15", "penguin 415 apon"]) {
+    const parsed = parseReportMessage(text, catalog);
+    assert.equal(parsed.kind, "report", text);
+    assert.equal(parsed.slotId, "penguin-415", text);
+  }
+  assert.equal(parseReportMessage("penguin 245", catalog).slotId, "penguin-245");
+});
+
 test("keeps penguin 245 in the normal report flow", () => {
   const parsed = parseReportMessage("penguin 245");
 
