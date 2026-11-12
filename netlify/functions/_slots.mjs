@@ -105,25 +105,59 @@ function aliasRegex(alias) {
   return new RegExp(`^${pattern}\\s*(?:A\\.?M\\.?|P\\.?M\\.?)?(?=\\s|$|[-—,;])`, "i");
 }
 
+// Every way of writing a tour's time: "2:00" also reads as "2", "200" and
+// "2 00"; "11" also reads as "11:00" and "1100".
+function timeVariants(time) {
+  const value = String(time || "").trim();
+  if (!value) return [];
+  const out = new Set([value]);
+  const clock = value.match(/^(\d{1,2}):(\d{2})(?!\d)/);
+  const hour = value.match(/^(\d{1,2})(?!\d|:)/);
+  if (clock) {
+    out.add(`${clock[1]}:${clock[2]}`);
+    out.add(`${clock[1]}${clock[2]}`);
+    out.add(`${clock[1]} ${clock[2]}`);
+    if (clock[2] === "00") out.add(clock[1]);
+  } else if (hour) {
+    out.add(hour[1]);
+    out.add(`${hour[1]}:00`);
+    out.add(`${hour[1]}00`);
+  }
+  return [...out];
+}
+
+/** Extra names for a tour, set on its catalog card ("SL", "KW", "BELUGAS"). */
+export function nicknamesFor(slot) {
+  return (Array.isArray(slot?.nicknames) ? slot.nicknames : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+/** "Any time" tours are filed by name alone; a typed time is ignored. */
+export function isAnyTime(slot) {
+  return Boolean(slot?.anyTime) && Boolean(String(slot?.time || "").trim());
+}
+
 function aliasesFor(slot) {
   const aliases = new Set([slot.label, slot.name, ...(Array.isArray(slot.aliases) ? slot.aliases : [])]);
-  if (slot.name && slot.time) aliases.add(`${slot.name} ${slot.time}`);
-  // Phones type "4 15" or "415" for "4:15". Times added from the shift page are
-  // matched the same way as the built-in ones.
-  const clock = String(slot.time || "").match(/^(\d{1,2}):(\d{2})\b/);
-  if (slot.name && clock) {
-    aliases.add(`${slot.name} ${clock[1]}${clock[2]}`);
-    aliases.add(`${slot.name} ${clock[1]} ${clock[2]}`);
+  const names = [slot.name, ...nicknamesFor(slot)].filter(Boolean);
+  const times = timeVariants(slot.time);
+  for (const name of names) {
+    if (times.length) times.forEach((time) => aliases.add(`${name} ${time}`));
+    else aliases.add(name);
   }
   for (const alias of [...aliases]) {
     aliases.add(String(alias).replace(/\s*(?:A\.?M\.?|P\.?M\.?)\b/gi, "").trim());
   }
-  // A tour with a set time needs the time: "shark tank was wild" is chat, not
-  // SHARK 11. Untimed tours (Fam, UAE, VIP...) still match on the name.
-  if (slot.time) {
-    const bare = normalizeTour(slot.name);
+  if (isAnyTime(slot)) {
+    // The bare name (and nicknames) file this tour whatever time is typed.
+    names.forEach((name) => aliases.add(name));
+  } else if (slot.time) {
+    // A tour with a set time needs the time: "shark tank was wild" is chat, not
+    // SHARK 11. Untimed tours (Fam, UAE, VIP...) still match on the name.
+    const bare = new Set(names.map(normalizeTour));
     for (const alias of [...aliases]) {
-      if (!/\d/.test(alias) && normalizeTour(alias) === bare) aliases.delete(alias);
+      if (!/\d/.test(alias) && bare.has(normalizeTour(alias))) aliases.delete(alias);
     }
   }
   return [...aliases].filter(Boolean);
@@ -162,12 +196,23 @@ export function tourFormRequest(raw) {
   return /^(?:tour\s*form|tour\s+report\s+form|report\s+form|private\s+tour\s+form)\s*[?.!]*$/i.test(cleanInput(raw));
 }
 
+// A time typed after an "any time" tour's name: "5", "5:00", "500", "5 pm", "at 5".
+const LOOSE_TIME = /^(?:@|at\s+)?\d{1,2}(?:\s*[:.]?\s*\d{2})?(?!\d)\s*(?:A\.?M\.?|P\.?M\.?)?(?=\s|$|[-—,;:.!])/i;
+// Without a time, an "any time" tour only files when a status or nothing
+// follows, so "beluga keepers said..." stays chat.
+const STATUS_START = /^(?:$|(?:APON|AOPN|A[-.\s]PON|NS|DNS|ISSUES?|NO[-\s]*SHOW|DID\s+NOT|DIDN['’]?T|NEVER\s+SHOWED|NOT\s+SOLD|UNSOLD|SOMETHING\s+HAPPENED|PROBLEM|ALL\s+(?:NORMAL|GOOD)|NORMAL|GOOD|FINE|OK(?:AY)?|NO\s+ISSUES?|OPERATIONAL\s+NORMAL|WENT\s+WELL)\b)/i;
+
 function matchTourAtStart(body, slots) {
   const cleaned = cleanInput(body);
   for (const record of buildAliasRecords(slots)) {
     const match = cleaned.match(record.regex);
     if (match) {
-      const remainder = cleaned.slice(match[0].length).replace(/^\s*[:;,—-]\s*/, "").trim();
+      let remainder = cleaned.slice(match[0].length).replace(/^\s*[:;,—-]\s*/, "").trim();
+      if (isAnyTime(record.slot) && !/\d/.test(record.alias)) {
+        const time = remainder.match(LOOSE_TIME);
+        if (time) remainder = remainder.slice(time[0].length).replace(/^\s*[:;,—-]\s*/, "").trim();
+        else if (!STATUS_START.test(remainder)) continue;
+      }
       return { slot: record.slot, alias: record.alias, remainder };
     }
   }

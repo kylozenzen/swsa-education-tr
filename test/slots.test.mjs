@@ -360,3 +360,49 @@ test("a timed tour still files with its time", () => {
 test("a tour word plus an unknown time still gets the warning", () => {
   assert.equal(parseReportMessage("penguin 9:15 apon").kind, "error");
 });
+
+// --- Nicknames and "any time" tours -----------------------------------------
+
+const withBeluga = (extra) => DEFAULT_TOURS.map((t) => (t.name === "BELUGA" ? { ...t, ...extra } : t));
+
+test("an any-time tour files whatever time is typed", () => {
+  const tours = withBeluga({ anyTime: true });
+  for (const message of ["beluga 5 apon", "beluga 5:00", "beluga 500 ns", "beluga at 5pm apon", "beluga 2 apon", "beluga apon", "beluga"]) {
+    const parsed = parseReportMessage(message, tours);
+    assert.equal(parsed.kind, "report", message);
+    assert.equal(parsed.label, "BELUGA 2:00", message);
+    assert.equal(parsed.note, "", message);
+  }
+});
+
+test("an any-time tour keeps the note after the time", () => {
+  const parsed = parseReportMessage("beluga 5 guest arrived late", withBeluga({ anyTime: true }));
+  assert.equal(parsed.status, "ISSUE");
+  assert.equal(parsed.note, "guest arrived late");
+});
+
+test("an any-time tour name in chat is still chat", () => {
+  assert.equal(parseReportMessage("beluga keepers said hi", withBeluga({ anyTime: true })).kind, "ignore");
+});
+
+test("without any-time, a new time still warns", () => {
+  assert.equal(parseReportMessage("beluga 5 apon").kind, "error");
+});
+
+test("nicknames work with every time of the tour", () => {
+  const tours = withBeluga({ nicknames: ["BEL", "WHITE WHALE"] });
+  assert.equal(parseReportMessage("bel 2 apon", tours).label, "BELUGA 2:00");
+  assert.equal(parseReportMessage("white whale 200 ns", tours).status, "NS");
+  assert.equal(parseReportMessage("bel apon", tours).kind, "ignore");
+});
+
+test("nicknames plus any time file on the nickname alone", () => {
+  const tours = withBeluga({ nicknames: ["BEL"], anyTime: true });
+  assert.equal(parseReportMessage("bel 4:30 apon", tours).label, "BELUGA 2:00");
+});
+
+test("a time typed 11:00AM in the catalog matches 11", () => {
+  const tours = DEFAULT_TOURS.map((t) => ({ ...t, aliases: [] }));
+  assert.equal(parseReportMessage("pip 11 apon", tours).label, "PIP 11:00AM");
+  assert.equal(parseReportMessage("beluga 2 apon", tours).label, "BELUGA 2:00");
+});
