@@ -34,6 +34,9 @@ function normalizeTour(slot, index) {
   const aliases = Array.isArray(slot?.aliases)
     ? slot.aliases.map((alias) => cleanText(alias, 160)).filter(Boolean).slice(0, 30)
     : [];
+  const nicknames = Array.isArray(slot?.nicknames)
+    ? [...new Set(slot.nicknames.map((nick) => cleanText(nick, 60)).filter(Boolean))].slice(0, 20)
+    : [];
   const legacyIndex = Number.isInteger(slot?.legacyIndex) && slot.legacyIndex >= 0 ? slot.legacyIndex : null;
 
   return {
@@ -42,6 +45,8 @@ function normalizeTour(slot, index) {
     name: name || label || `Tour ${index + 1}`,
     time,
     aliases,
+    nicknames,
+    anyTime: slot?.anyTime === true,
     legacyIndex,
     active: slot?.active !== false,
     reportable: slot?.reportable !== false,

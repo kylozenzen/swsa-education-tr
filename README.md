@@ -52,3 +52,11 @@ No status defaults to APON. Multiple reports can be sent in one message, one per
 Staff can type `tour form` (or `tourform`, `tour report form`, `report form`, or `private tour form`) in GroupMe. The bot replies with the canonical `/tour-form` URL without creating a report from the command. Normal operational reports continue to use the usual GroupMe workflow.
 
 The Shift Report displays only reports actually submitted for the selected date; the year-round Tour Catalog is used for bot recognition and is not a daily operating schedule.
+
+## Nicknames and "Any time" tours
+
+Each tour card in the Tour Catalog (Shift Report → Supervisor admin) has:
+
+- **Nicknames** — extra names for the tour, comma-separated (e.g. `SL, Sea Lions`). They work with every time on the card, so `SL` + time `1:15` recognizes `sl 1:15`, `sl 115` and `sl 1 15`.
+- **Any time — ignore the time typed** — the bot files the report under this tour whatever time the guide types (`beluga 5 apon` files under BELUGA even if the catalog says 2:00). With no time typed, it files only when a status or nothing follows (`beluga apon`, `beluga`), so `beluga keepers said...` stays chat.
+- **Built-in spellings** — the original hard-coded spellings. Remove any with ✕.
