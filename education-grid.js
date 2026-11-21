@@ -112,12 +112,6 @@
       employees.push({ name, role, entries, column: columnLetter(col) });
     }
 
-    employees.sort((a,b) => {
-      const at = a.entries.length ? Math.min(...a.entries.map(e=>e.sort)) : 99999;
-      const bt = b.entries.length ? Math.min(...b.entries.map(e=>e.sort)) : 99999;
-      return at - bt || a.column.localeCompare(b.column, undefined, {numeric:true});
-    });
-
     const notes = [];
     for (let row = 70; row <= maxRow; row++) {
       for (let col = 1; col <= maxCol; col++) {
