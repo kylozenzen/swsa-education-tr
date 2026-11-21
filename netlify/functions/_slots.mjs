@@ -329,10 +329,31 @@ function looseApon(remainder) {
   return { status: "APON", note: noteFrom(residue) };
 }
 
+// NS and DNS count anywhere in the message, like APON does. "Ramirez part of 2 NS"
+// is a no show for Ramirez, not an issue. If the message also says it was an issue,
+// the issue wording still decides, so a real problem is never quietly turned into a no show.
+// Only the abbreviations move anywhere; phrases like "no show" still need to open the message.
+const LOOSE_NS = /\bNS\b/i;
+const LOOSE_DNS = /\bDNS\b/i;
+const ISSUE_WORDS = /\b(?:ISSUES?|SOMETHING\s+HAPPENED|PROBLEM)\b/i;
+
+function looseNsDns(remainder) {
+  if (ISSUE_WORDS.test(remainder)) return null;
+  const ns = LOOSE_NS.test(remainder);
+  const dns = LOOSE_DNS.test(remainder);
+  // Both NS and DNS in one message is unclear, so it is asked about, not guessed.
+  if (ns && dns) return { status: "UNCLEAR", note: remainder };
+  if (ns === dns) return null;
+  const pattern = ns ? LOOSE_NS : LOOSE_DNS;
+  return { status: ns ? "NS" : "DNS", note: noteFrom(remainder.replace(pattern, " ")) };
+}
+
 function matchStatus(remainder) {
   if (!remainder) return { status: "APON", note: "" };
   const loose = looseApon(remainder);
   if (loose) return loose;
+  const looseNo = looseNsDns(remainder);
+  if (looseNo) return looseNo;
   const groups = [["APON", APON_PATTERNS], ["NS", NS_PATTERNS], ["DNS", DNS_PATTERNS], ["ISSUE", ISSUE_PATTERNS]];
   for (const [status, patterns] of groups) {
     for (const pattern of patterns) {
@@ -342,6 +363,9 @@ function matchStatus(remainder) {
       }
     }
   }
+  // A one- or two-word leftover ("cancelled", "Fam Nicole") is too little to call an
+  // issue, so ask. Longer notes describe something that happened and stay as issues.
+  if (remainder.trim().split(/\s+/).length <= 2 && !isJunkNote(remainder)) return { status: "UNCLEAR", note: remainder };
   return { status: "ISSUE", note: remainder };
 }
 
@@ -366,6 +390,17 @@ export function isQuestion(text) {
   return QUESTION_START.test(value) || /\?\s*[)\]"'!]*\s*$/.test(value);
 }
 
+// Keyboard mash such as "asjkdfgasik..." is one huge word, or a long run with almost no vowels.
+// Normal words are never this long and almost never this vowel-free.
+export function isJunkNote(text) {
+  return String(text || "").toLowerCase().split(/\s+/).some((word) => {
+    const letters = word.replace(/[^a-z]/g, "");
+    if (letters.length >= 20) return true;
+    if (letters.length < 8) return false;
+    return (letters.match(/[aeiouy]/g) || []).length / letters.length <= 0.2;
+  });
+}
+
 export function parseReportCommand(text, slots = DEFAULT_TOURS) {
   const raw = cleanInput(text);
   if (!raw) return { kind: "ignore" };
@@ -373,7 +408,9 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
   if (helpRequest(raw)) return { kind: "help" };
   if (isQuestion(raw)) return { kind: "ignore", question: true };
 
-  const body = stripCommand(raw);
+  // "fix penguin 245 apon" replaces the report already saved for that tour today.
+  const correction = /^fix\b/i.test(raw);
+  const body = stripCommand(correction ? raw.replace(/^fix\b\s*/i, "") : raw);
   const tourMatch = matchTourAtStart(body, slots);
   if (!tourMatch) {
     if (!looksLikeReportAttempt(raw, slots)) return { kind: "ignore" };
@@ -383,8 +420,14 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
   const vip = isVipTour(tourMatch.slot);
   const { leader, rest } = vip ? extractLeader(tourMatch.remainder) : { leader: "", rest: tourMatch.remainder };
   const parsedStatus = matchStatus(rest);
+  if (parsedStatus.status === "UNCLEAR") {
+    return { kind: "error", message: "I couldn't tell the status. Was that NS, DNS, an issue, or all normal? Send it again with one of those." };
+  }
   if (!VALID_STATUSES.has(parsedStatus.status)) {
     return { kind: "error", message: "Use APON, NS, DNS, or describe what happened." };
+  }
+  if (isJunkNote(parsedStatus.note)) {
+    return { kind: "error", message: "That note looks like random letters. Please retype it." };
   }
   if (parsedStatus.status === "ISSUE" && !parsedStatus.note) {
     return { kind: "error", message: "Add a short note after ISSUE so the shift lead knows what happened." };
@@ -398,6 +441,7 @@ export function parseReportCommand(text, slots = DEFAULT_TOURS) {
     status: parsedStatus.status,
     note: parsedStatus.note,
     label: slot.label,
+    ...(correction ? { correction: true } : {}),
     ...(vip ? {
       vip: true,
       leader,
@@ -471,6 +515,9 @@ export function parseReportMessage(text, slots = DEFAULT_TOURS) {
   const lines = orientation ? allLines.slice(0, orientationAt) : allLines;
 
   if (orientation) {
+    if (isJunkNote(orientation.note)) {
+      return { kind: "error", message: "The day summary looks like random letters. Please retype it." };
+    }
     if (lines.length === 0) return orientation;
     const before = parseReportMessage(lines.join("\n"), slots);
     if (before.kind === "report") return { kind: "batch", reports: [before, orientation], errors: [] };

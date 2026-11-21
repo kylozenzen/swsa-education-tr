@@ -1,4 +1,4 @@
-import { addSubmission, chicagoToday, claimCooldown, getDay, getTourConfig } from "./_store.mjs";
+import { addSubmission, chicagoToday, claimCooldown, getDay, getTourConfig, removeSubmission } from "./_store.mjs";
 import { commandHelp, isVipTour, parseReportMessage, pickVipSlot, tourFormRequest } from "./_slots.mjs";
 
 const VERSION = "groupme-v13-2026-10-09-chat-safe";
@@ -206,15 +206,30 @@ export default async function handler(request) {
     }
     const baseSourceId = String(message.id || message.source_guid || Date.now());
     const confirmations = [];
+    const today = chicagoToday();
+    const openToday = [...(await getDay(today)).submissions];
 
     for (let index = 0; index < reports.length; index += 1) {
       const report = reports[index];
+      // One report per tour per day. VIP tours and orientation take several, so they are exempt.
+      if (!report.vip && !report.orientation && report.slotId) {
+        const existing = openToday.find((s) => String(s.slotId) === String(report.slotId));
+        if (existing && !report.correction) {
+          confirmations.push(`⚠️ ${report.label} already has a report today from ${existing.who || "someone"}. To correct it, send “fix” and the full report.`);
+          continue;
+        }
+        if (existing) {
+          await removeSubmission(today, existing.id, senderName);
+          openToday.splice(openToday.indexOf(existing), 1);
+        }
+      }
       const result = await saveOneReport({
         parsed: report,
         senderName,
         senderId,
         sourceId: reports.length > 1 ? `${baseSourceId}:${index}` : baseSourceId,
       });
+      openToday.push({ id: result.submission?.id, slotId: report.slotId, who: senderName });
       confirmations.push(confirmationLine(report, result.duplicate));
     }
 

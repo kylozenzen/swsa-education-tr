@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { DEFAULT_TOURS, commandHelp, extractLeader, groupSubmissions, isVipTour, normalizeOverride, normalizeOverrides, parseReportMessage, pickVipSlot, tourFormRequest } from "../netlify/functions/_slots.mjs";
+import { DEFAULT_TOURS, commandHelp, extractLeader, groupSubmissions, isJunkNote, isVipTour, normalizeOverride, normalizeOverrides, parseReportMessage, pickVipSlot, tourFormRequest } from "../netlify/functions/_slots.mjs";
 
 const tourFormCommands = [
   "tour form",
@@ -405,4 +405,45 @@ test("a time typed 11:00AM in the catalog matches 11", () => {
   const tours = DEFAULT_TOURS.map((t) => ({ ...t, aliases: [] }));
   assert.equal(parseReportMessage("pip 11 apon", tours).label, "PIP 11:00AM");
   assert.equal(parseReportMessage("beluga 2 apon", tours).label, "BELUGA 2:00");
+});
+
+// --- Staff report fixes (Nov 2026) -------------------------------------------
+
+test("NS anywhere in the message is a no show, not an issue", () => {
+  assert.equal(parseReportMessage("penguin 245 Ramirez part of 2 NS").status, "NS");
+  assert.equal(parseReportMessage("penguin 245 Ramirez part of 2 NS").note, "Ramirez part of 2");
+});
+
+test("an issue wording keeps the issue even when NS appears", () => {
+  assert.equal(parseReportMessage("penguin 245 something happened, ns on the second party").status, "ISSUE");
+});
+
+test("a one- or two-word leftover asks instead of guessing", () => {
+  const parsed = parseReportMessage("penguin 245 cancelled");
+  assert.equal(parsed.kind, "error");
+  assert.match(parsed.message, /NS, DNS, an issue, or all normal/);
+});
+
+test("both NS and DNS in one message is not guessed", () => {
+  assert.equal(parseReportMessage("penguin 245 ns dns").kind, "error");
+});
+
+test("keyboard-mash notes are rejected", () => {
+  const parsed = parseReportMessage("penguin 245 asjkdfgasikfgasijdgfasidfgju aishfosaidhfsidjugfahdfgasdf");
+  assert.equal(parsed.kind, "error");
+  assert.match(parsed.message, /random letters/);
+  assert.equal(isJunkNote("guest was 20 min late"), false);
+});
+
+test("a multi-line orientation summary with random letters is rejected", () => {
+  const parsed = parseReportMessage(["Orientation", "asjkdfgasikfgasijdgfasidfgju aishfosaidhfsidjugfahdfgasdf"].join("\n"));
+  assert.equal(parsed.kind, "error");
+});
+
+test("fix marks a correction and leaves the tour alone", () => {
+  const parsed = parseReportMessage("fix penguin 245 ns");
+  assert.equal(parsed.kind, "report");
+  assert.equal(parsed.correction, true);
+  assert.equal(parsed.status, "NS");
+  assert.equal(parsed.label, "PENGUIN 2:45");
 });
