@@ -35,9 +35,22 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .day-title{font-size:13px;color:var(--muted);font-weight:700}
 .meta{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 16px}
 .meta span{background:var(--green-soft);color:#205a48;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700}
-.people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.people{display:grid;grid-template-columns:1fr;gap:9px}
+.staff-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.staff-tools input{flex:1;min-width:170px}
+.staff-tools button{padding:11px 12px}
+.staff-hint{font-size:12px;color:var(--muted);margin:0 0 12px}
+.person[hidden]{display:none!important}
+.person summary{list-style:none;cursor:pointer;touch-action:manipulation}
+.person summary::-webkit-details-marker{display:none}
+.person summary:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+.person-right{display:flex;align-items:center;gap:10px}
+.person-name{font-weight:800;font-size:16px;overflow-wrap:anywhere}
+.chevron{font-size:24px;line-height:1;transition:transform .15s}
+.person[open] .chevron{transform:rotate(180deg)}
+.person-assignments{border-top:1px solid #e8eeea;padding-top:8px}
 .person{border:1px solid var(--line);border-radius:11px;background:#fff;padding:15px;min-width:0;break-inside:avoid}
-.person-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid #e8eeea;padding-bottom:10px;margin-bottom:8px}
+.person-top{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:4px 0}
 .person h3{font-size:17px;line-height:1.2;margin:0;overflow-wrap:anywhere}
 .role{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:right}
 .assignment{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px solid #f0f3f0;font-size:13px}
@@ -50,7 +63,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .note-line{white-space:pre-wrap;font-size:13px;padding:4px 0}
 .privacy{font-size:12px;color:var(--muted);margin-top:16px}
 @media(max-width:700px){.wrap{padding:17px 12px 42px}.top{display:block}.test{display:inline-block;margin-top:12px}.controls{grid-template-columns:1fr}.people{grid-template-columns:1fr}.panel{padding:15px}.preview-head{align-items:flex-start;flex-direction:column}}
-@media print{body{background:#fff}.wrap{max-width:none;padding:0}.top,.panel.controls-panel,.actions,.privacy{display:none!important}.panel{border:0;box-shadow:none;padding:0}.people{grid-template-columns:repeat(2,1fr)}}
+@media print{body{background:#fff}.wrap{max-width:none;padding:0}.top,.panel.controls-panel,.actions,.privacy{display:none!important}.panel{border:0;box-shadow:none;padding:0} .staff-tools,.staff-hint{display:none!important}.people{grid-template-columns:1fr}.person{break-inside:avoid}.person-assignments{display:block!important}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -100,7 +113,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <div id="people-count" class="count"></div>
     </div>
     <div id="meta" class="meta"></div>
+    <div class="staff-tools">
+      <input id="staff-search" type="search" placeholder="Search staff by name or role…" aria-label="Search staff">
+      <button id="expand-all" class="secondary" type="button">Expand all</button>
+      <button id="collapse-all" class="secondary" type="button">Collapse all</button>
+    </div>
+    <p id="search-count" class="staff-hint">Tap a name to view assignments</p>
     <div id="people" class="people"></div>
+    <p id="no-results" class="empty hidden">No staff match your search.</p>
     <div id="notes" class="notes hidden"></div>
     <div class="privacy">Preview only. Nothing is sent to GroupMe. Downloading creates an image on this device.</div>
   </section>
