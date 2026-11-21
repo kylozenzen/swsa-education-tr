@@ -49,13 +49,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .chevron{font-size:24px;line-height:1;transition:transform .15s}
 .person[open] .chevron{transform:rotate(180deg)}
 .person-assignments{border-top:1px solid #e8eeea;padding-top:8px}
-.person{border:1px solid var(--line);border-radius:11px;background:#fff;padding:15px;min-width:0;break-inside:avoid}
+.person{border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 13px;min-width:0;break-inside:avoid}
 .person-top{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:4px 0}
 .person h3{font-size:17px;line-height:1.2;margin:0;overflow-wrap:anywhere}
 .role{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:right}
-.assignment{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px solid #f0f3f0;font-size:13px}
+.assignment{display:grid;grid-template-columns:minmax(115px,auto) minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid #f0f3f0;font-size:13px}
 .assignment:last-child{border-bottom:0}
-.time{font-weight:800;font-variant-numeric:tabular-nums;color:#425b55}
+.time{white-space:nowrap;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;color:#425b55}
 .task{overflow-wrap:anywhere}
 .empty{color:#8a9994;font-size:13px;font-style:italic}
 .notes{background:#f7f4e9;border:1px solid #e8dfc7;border-radius:11px;padding:15px;margin-top:14px}
@@ -97,7 +97,6 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
     <div class="actions">
       <button id="build" disabled>Build preview</button>
-      <button id="download" class="secondary" disabled>Download PNG</button>
       <button id="print" class="secondary" disabled>Print / Save PDF</button>
     </div>
     <div id="status" class="status" role="status" aria-live="polite">Choose the weekly Excel file to get started.</div>
@@ -122,7 +121,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div id="people" class="people"></div>
     <p id="no-results" class="empty hidden">No staff match your search.</p>
     <div id="notes" class="notes hidden"></div>
-    <div class="privacy">Preview only. Nothing is sent to GroupMe. Downloading creates an image on this device.</div>
+    <div class="privacy">Preview only. Nothing is sent to GroupMe or uploaded to a server.</div>
   </section>
 </main>
 <script src="/education-grid.js"></script>
