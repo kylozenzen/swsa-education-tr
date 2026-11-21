@@ -18,6 +18,11 @@
   status = 200
 
 [[redirects]]
+  from = "/education"
+  to = "/education.html"
+  status = 200
+
+[[redirects]]
   from = "/tour-form"
   to = "/index.html"
   status = 200
