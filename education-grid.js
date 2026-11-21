@@ -11,7 +11,7 @@
   let workbook = null;
   let currentGrid = null;
 
-  const DAY_RE = /^(MON|TUE|WED|THU|FRI|SAT|SUN)\\s+\\d{1,2}\\.\\d{1,2}$/i;
+  const DAY_RE = /^(MON|TUE|WED|THU|FRI|SAT|SUN)\s+\d{1,2}\.\d{1,2}$/i;
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
@@ -34,7 +34,7 @@
       const m = minutes % 60;
       return formatClock(h, m);
     }
-    return String(value).replace(/\\s+/g, " ").trim();
+    return String(value).replace(/\s+/g, " ").trim();
   }
 
   function formatClock(hour, minute) {
@@ -47,7 +47,7 @@
     if (value instanceof Date) return value.getHours() * 60 + value.getMinutes();
     if (typeof value === "number" && value >= 0 && value < 1) return Math.round(value * 1440);
     const s = String(value ?? "").trim();
-    const match = s.match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?$/);
+    const match = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
     if (!match) return null;
     return Number(match[1]) * 60 + Number(match[2]);
   }
@@ -70,7 +70,7 @@
 
   function getDayTitle(ws, sheetName, year) {
     const title = cellText(valueAt(ws, 2, 4));
-    const match = sheetName.match(/(\\d{1,2})\\.(\\d{1,2})$/);
+    const match = sheetName.match(/(\d{1,2})\.(\d{1,2})$/);
     if (match) {
       const month = Number(match[1]) - 1;
       const day = Number(match[2]);
@@ -211,7 +211,7 @@
   }
 
   function drawText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
-    const words = String(text).split(/\\s+/);
+    const words = String(text).split(/\s+/);
     let line = "";
     let lines = 0;
     for (const word of words) {
