@@ -46,9 +46,14 @@ This authenticated GET response confirms that Netlify is running the current Gro
 
 No status defaults to APON. Multiple reports can be sent in one message, one per line.
 
-
 ## Sensitive reports
 
 Staff can type `tour form` (or `tourform`, `tour report form`, `report form`, or `private tour form`) in GroupMe. The bot replies with the canonical `/tour-form` URL without creating a report from the command. Normal operational reports continue to use the usual GroupMe workflow.
 
 The Shift Report displays only reports actually submitted for the selected date; the year-round Tour Catalog is used for bot recognition and is not a daily operating schedule.
+
+## Education Grid (preview MVP)
+
+Open `/education` to use the separate Education Grid preview. Upload the weekly workbook, choose a daily tab, and build a mobile-friendly roster. The workbook is parsed in the browser; it is not sent to a Netlify Function or stored by this feature.
+
+The preview can be printed or saved as a PDF, or downloaded as a PNG. **This first version is test-only:** it does not post to GroupMe and has no GroupMe send button. Verify the parsed assignments and image layout before enabling any distribution workflow. The Education Grid files are separate from the Tour Report form and its existing functions.
