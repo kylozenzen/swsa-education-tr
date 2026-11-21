@@ -150,23 +150,48 @@
 
     const people = $("#people");
     people.innerHTML = "";
+    const search = $("#staff-search");
+    search.value = "";
+    const count = $("#search-count");
+    function filterStaff() {
+      const query = search.value.trim().toLocaleLowerCase();
+      let visible = 0;
+      people.querySelectorAll(".person").forEach(card => {
+        const match = card.dataset.search.includes(query);
+        card.hidden = !match;
+        if (match) visible++;
+      });
+      count.textContent = query ? `${visible} of ${grid.employees.length} staff shown` : "Tap a name to view assignments";
+      $("#no-results").classList.toggle("hidden", visible !== 0);
+    }
     grid.employees.forEach(person => {
-      const card = document.createElement("article");
+      const card = document.createElement("details");
       card.className = "person";
-      const top = document.createElement("div");
+      card.dataset.search = `${person.name} ${person.role || ""}`.toLocaleLowerCase();
+      const top = document.createElement("summary");
       top.className = "person-top";
-      const name = document.createElement("h3");
+      const name = document.createElement("span");
+      name.className = "person-name";
       name.textContent = person.name;
-      const role = document.createElement("div");
+      const right = document.createElement("span");
+      right.className = "person-right";
+      const role = document.createElement("span");
       role.className = "role";
       role.textContent = person.role || "Education";
-      top.append(name, role);
+      const chevron = document.createElement("span");
+      chevron.className = "chevron";
+      chevron.textContent = "⌄";
+      chevron.setAttribute("aria-hidden", "true");
+      right.append(role, chevron);
+      top.append(name, right);
       card.appendChild(top);
+      const assignments = document.createElement("div");
+      assignments.className = "person-assignments";
       if (!person.entries.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
         empty.textContent = "No assignments listed.";
-        card.appendChild(empty);
+        assignments.appendChild(empty);
       } else {
         person.entries.forEach(entry => {
           const row = document.createElement("div");
@@ -178,11 +203,16 @@
           task.className = "task";
           task.textContent = entry.task;
           row.append(time, task);
-          card.appendChild(row);
+          assignments.appendChild(row);
         });
       }
+      card.appendChild(assignments);
       people.appendChild(card);
     });
+    search.oninput = filterStaff;
+    $("#expand-all").onclick = () => people.querySelectorAll(".person:not([hidden])").forEach(card => { card.open = true; });
+    $("#collapse-all").onclick = () => people.querySelectorAll(".person").forEach(card => { card.open = false; });
+    filterStaff();
 
     const notes = $("#notes");
     notes.innerHTML = "";
