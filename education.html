@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#102b2b">
+<title>Education Grid · SWSA</title>
+<style>
+:root{--ink:#132b2b;--muted:#647775;--paper:#f2f5f1;--card:#fff;--line:#d9e1dc;--green:#176b56;--green-soft:#e4f1e9;--gold:#d8a746;--red:#a44732}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 18px 64px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:22px}
+.eyebrow{font:700 11px/1.2 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+h1{font-size:clamp(27px,5vw,38px);line-height:1.05;margin:8px 0 5px;letter-spacing:-.04em}
+.sub{color:var(--muted);font-size:14px}
+.test{background:#fff4d9;color:#79550c;border:1px solid #ead59d;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800;white-space:nowrap}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:18px 0;box-shadow:0 8px 26px #17312b0a}
+h2{font-size:18px;margin:0 0 12px}
+.instructions{color:var(--muted);font-size:14px;margin:-5px 0 16px}
+.controls{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(150px,.7fr) minmax(180px,.8fr);gap:12px;align-items:end}
+label{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+input,select{width:100%;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;color:var(--ink);font:inherit;padding:13px}
+input[type=file]{padding:10px;background:#fff}
+button{border:0;border-radius:9px;background:var(--ink);color:#fff;font:800 14px inherit;padding:13px 17px;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.secondary{background:#e8efeb;color:var(--ink)}
+.status{margin-top:13px;color:var(--muted);font-size:13px;min-height:20px}
+.status.error{color:var(--red);font-weight:700}
+.hidden{display:none!important}
+.preview-head{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:14px}
+.preview-head h2{margin:0}
+.count{font-size:12px;color:var(--muted);font-weight:700}
+.day-title{font-size:13px;color:var(--muted);font-weight:700}
+.meta{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 16px}
+.meta span{background:var(--green-soft);color:#205a48;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700}
+.people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.person{border:1px solid var(--line);border-radius:11px;background:#fff;padding:15px;min-width:0;break-inside:avoid}
+.person-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid #e8eeea;padding-bottom:10px;margin-bottom:8px}
+.person h3{font-size:17px;line-height:1.2;margin:0;overflow-wrap:anywhere}
+.role{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;text-align:right}
+.assignment{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px solid #f0f3f0;font-size:13px}
+.assignment:last-child{border-bottom:0}
+.time{font-weight:800;font-variant-numeric:tabular-nums;color:#425b55}
+.task{overflow-wrap:anywhere}
+.empty{color:#8a9994;font-size:13px;font-style:italic}
+.notes{background:#f7f4e9;border:1px solid #e8dfc7;border-radius:11px;padding:15px;margin-top:14px}
+.notes h3{margin:0 0 8px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.note-line{white-space:pre-wrap;font-size:13px;padding:4px 0}
+.privacy{font-size:12px;color:var(--muted);margin-top:16px}
+@media(max-width:700px){.wrap{padding:17px 12px 42px}.top{display:block}.test{display:inline-block;margin-top:12px}.controls{grid-template-columns:1fr}.people{grid-template-columns:1fr}.panel{padding:15px}.preview-head{align-items:flex-start;flex-direction:column}}
+@media print{body{background:#fff}.wrap{max-width:none;padding:0}.top,.panel.controls-panel,.actions,.privacy{display:none!important}.panel{border:0;box-shadow:none;padding:0}.people{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">SeaWorld San Antonio · Education</div>
+      <h1>Education Grid</h1>
+      <div class="sub">Turn the daily Excel schedule into something people can actually read on a phone.</div>
+    </div>
+    <div class="test">TEST MODE · NOTHING IS POSTED</div>
+  </header>
+
+  <section class="panel controls-panel">
+    <h2>Build a daily grid</h2>
+    <p class="instructions">Upload the weekly workbook, choose a day, and preview the mobile-friendly version. Your workbook is processed in this browser; it is not uploaded to Netlify.</p>
+    <div class="controls">
+      <div>
+        <label for="workbook">Weekly Excel workbook</label>
+        <input id="workbook" type="file" accept=".xlsx,.xls">
+      </div>
+      <div>
+        <label for="day">Schedule day</label>
+        <select id="day" disabled><option value="">Upload a workbook first</option></select>
+      </div>
+      <div>
+        <label for="year">Schedule year</label>
+        <input id="year" type="number" min="2020" max="2099" value="2026">
+      </div>
+    </div>
+    <div class="actions">
+      <button id="build" disabled>Build preview</button>
+      <button id="download" class="secondary" disabled>Download PNG</button>
+      <button id="print" class="secondary" disabled>Print / Save PDF</button>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite">Choose the weekly Excel file to get started.</div>
+  </section>
+
+  <section id="preview-panel" class="panel hidden">
+    <div class="preview-head">
+      <div>
+        <div class="eyebrow">Daily staffing overview</div>
+        <h2 id="preview-title">Schedule preview</h2>
+        <div id="preview-subtitle" class="day-title"></div>
+      </div>
+      <div id="people-count" class="count"></div>
+    </div>
+    <div id="meta" class="meta"></div>
+    <div id="people" class="people"></div>
+    <div id="notes" class="notes hidden"></div>
+    <div class="privacy">Preview only. Nothing is sent to GroupMe. Downloading creates an image on this device.</div>
+  </section>
+</main>
+<script src="/education-grid.js"></script>
+</body>
+</html>
