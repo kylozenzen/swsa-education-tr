@@ -5,7 +5,6 @@
   const daySelect = $("#day");
   const yearInput = $("#year");
   const buildButton = $("#build");
-  const downloadButton = $("#download");
   const printButton = $("#print");
   const status = $("#status");
   let workbook = null;
@@ -105,11 +104,37 @@
         const time = parseTime(timeValue);
         entries.push({
           time: time === null ? "" : formatClock(Math.floor(time / 60) % 24, time % 60),
-          sort: time === null ? row * 10000 : time,
+          start: time,
+          row,
           task
         });
       }
-      employees.push({ name, role, entries, column: columnLetter(col) });
+      // Only merge adjacent rows with the same assignment. A blank cell,
+      // changed assignment, or missing time ends a block.
+      const condensed = [];
+      for (const entry of entries) {
+        const previous = condensed[condensed.length - 1];
+        const sameTask = previous && previous.task.toLocaleLowerCase() === entry.task.toLocaleLowerCase();
+        const adjacent = previous && entry.row === previous.lastRow + 1;
+        const ordered = previous && entry.start !== null && previous.start !== null && entry.start > previous.start;
+        if (sameTask && adjacent && ordered) {
+          previous.lastRow = entry.row;
+          previous.end = entry.start;
+        } else {
+          condensed.push({ ...entry, lastRow: entry.row, end: null });
+        }
+      }
+      // End time is taken from the following row on the same time axis,
+      // not guessed from a fixed slot duration.
+      condensed.forEach(block => {
+        if (block.start === null) return;
+        const next = parseTime(valueAt(ws, block.lastRow + 1, timeCol));
+        if (next !== null && next > block.start) block.end = next;
+        block.time = block.end !== null
+          ? `${formatClock(Math.floor(block.start / 60), block.start % 60)}–${formatClock(Math.floor(block.end / 60), block.end % 60)}`
+          : formatClock(Math.floor(block.start / 60), block.start % 60);
+      });
+      employees.push({ name, role, entries: condensed, column: columnLetter(col) });
     }
 
     const notes = [];
@@ -230,151 +255,7 @@
     } else {
       notes.classList.add("hidden");
     }
-    downloadButton.disabled = grid.employees.length === 0;
     printButton.disabled = grid.employees.length === 0;
-  }
-
-  function drawText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
-    const words = String(text).split(/\s+/);
-    let line = "";
-    let lines = 0;
-    for (const word of words) {
-      const test = line ? line + " " + word : word;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        ctx.fillText(line, x, y + lines * lineHeight);
-        lines++;
-        line = word;
-        if (lines >= maxLines - 1) break;
-      } else line = test;
-    }
-    if (line && lines < maxLines) ctx.fillText(line, x, y + lines * lineHeight);
-    return Math.min(lines + 1, maxLines);
-  }
-
-  function buildCanvas(grid) {
-    const width = 1080;
-    const margin = 52;
-    const cardGap = 16;
-    const cardWidth = width - margin * 2;
-    const headerHeight = 220;
-    const footerHeight = grid.notes.length ? 80 + grid.notes.length * 42 : 36;
-    const heights = grid.employees.map(person => 112 + Math.max(1, person.entries.length) * 48);
-    const height = headerHeight + heights.reduce((a,b)=>a+b,0) + cardGap * grid.employees.length + footerHeight + 50;
-    if (height > 30000) throw new Error("This day is too long for a single image. Try printing to PDF instead.");
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#f2f5f1";
-    ctx.fillRect(0,0,width,height);
-
-    ctx.fillStyle = "#176b56";
-    ctx.font = "800 22px Arial";
-    ctx.fillText("SEAWORLD SAN ANTONIO  /  EDUCATION", margin, 58);
-    ctx.fillStyle = "#132b2b";
-    ctx.font = "800 54px Arial";
-    ctx.fillText(grid.title, margin, 124);
-    ctx.fillStyle = "#647775";
-    ctx.font = "600 25px Arial";
-    ctx.fillText(grid.subtitle, margin, 166);
-    ctx.fillStyle = "#e4f1e9";
-    ctx.fillRect(margin, 185, 250, 5);
-
-    let y = headerHeight;
-    grid.employees.forEach((person, index) => {
-      const cardHeight = heights[index];
-      ctx.fillStyle = "#ffffff";
-      roundRect(ctx, margin, y, cardWidth, cardHeight, 18);
-      ctx.fill();
-      ctx.strokeStyle = "#d9e1dc";
-      ctx.lineWidth = 2;
-      roundRect(ctx, margin, y, cardWidth, cardHeight, 18);
-      ctx.stroke();
-
-      ctx.fillStyle = "#132b2b";
-      ctx.font = "800 30px Arial";
-      ctx.fillText(person.name, margin + 26, y + 43);
-      ctx.textAlign = "right";
-      ctx.fillStyle = "#176b56";
-      ctx.font = "800 18px Arial";
-      ctx.fillText(person.role || "EDUCATION", width - margin - 26, y + 40);
-      ctx.textAlign = "left";
-      ctx.strokeStyle = "#e8eeea";
-      ctx.beginPath();
-      ctx.moveTo(margin + 24, y + 62);
-      ctx.lineTo(width - margin - 24, y + 62);
-      ctx.stroke();
-
-      let rowY = y + 96;
-      if (!person.entries.length) {
-        ctx.fillStyle = "#8a9994";
-        ctx.font = "italic 20px Arial";
-        ctx.fillText("No assignments listed.", margin + 26, rowY);
-      } else {
-        person.entries.forEach(entry => {
-          ctx.fillStyle = "#425b55";
-          ctx.font = "800 19px Arial";
-          ctx.fillText(entry.time || "—", margin + 26, rowY);
-          ctx.fillStyle = "#1d302d";
-          ctx.font = "500 21px Arial";
-          const lines = drawText(ctx, entry.task, margin + 170, rowY, cardWidth - 210, 25, 2);
-          rowY += Math.max(48, lines * 25 + 12);
-        });
-      }
-      y += cardHeight + cardGap;
-    });
-
-    if (grid.notes.length) {
-      ctx.fillStyle = "#eee8d5";
-      roundRect(ctx, margin, y, cardWidth, footerHeight - 16, 16);
-      ctx.fill();
-      ctx.fillStyle = "#795b1e";
-      ctx.font = "800 20px Arial";
-      ctx.fillText("SHARED NOTES & CLOSING REMINDERS", margin + 24, y + 36);
-      ctx.fillStyle = "#263632";
-      ctx.font = "500 18px Arial";
-      let ny = y + 68;
-      grid.notes.forEach(note => {
-        drawText(ctx, "• " + note, margin + 24, ny, cardWidth - 48, 22, 2);
-        ny += 42;
-      });
-    }
-    return canvas;
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x+r,y);
-    ctx.arcTo(x+w,y,x+w,y+h,r);
-    ctx.arcTo(x+w,y+h,x,y+h,r);
-    ctx.arcTo(x,y+h,x,y,r);
-    ctx.arcTo(x,y,x+w,y,r);
-    ctx.closePath();
-  }
-
-  async function downloadPng() {
-    if (!currentGrid) return;
-    downloadButton.disabled = true;
-    downloadButton.textContent = "Preparing image…";
-    try {
-      const canvas = buildCanvas(currentGrid);
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-      if (!blob) throw new Error("The browser could not create the PNG.");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `education-grid-${currentGrid.sheetName.toLowerCase().replace(/[^a-z0-9]+/g,"-")}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      setStatus("PNG downloaded to this device. It has not been sent anywhere.");
-    } catch (error) {
-      setStatus(error.message || "Could not create the image.", true);
-    } finally {
-      downloadButton.disabled = false;
-      downloadButton.textContent = "Download PNG";
-    }
   }
 
   fileInput.addEventListener("change", async () => {
@@ -383,7 +264,6 @@
     daySelect.innerHTML = '<option value="">Choose a day</option>';
     daySelect.disabled = true;
     buildButton.disabled = true;
-    downloadButton.disabled = true;
     printButton.disabled = true;
     $("#preview-panel").classList.add("hidden");
     const file = fileInput.files && fileInput.files[0];
@@ -421,6 +301,5 @@
     }
   });
 
-  downloadButton.addEventListener("click", downloadPng);
   printButton.addEventListener("click", () => window.print());
 })();
